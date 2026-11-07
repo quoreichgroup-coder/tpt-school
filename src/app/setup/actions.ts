@@ -99,6 +99,39 @@ export async function completeSetupAction(
       })
       if (existingUser) throw new SetupError('Un compte avec cette adresse e-mail existe déjà.')
 
+      // Create the academic calendar during first-run setup. Classes, attendance,
+      // and gradebooks all depend on an active year and its terms.
+      const yearNumber = Number(school.currentYear)
+      // Use midday UTC so the date-only values stay on the intended calendar
+      // day when rendered in time zones west or east of UTC.
+      const yearStart = new Date(Date.UTC(yearNumber, 0, 1, 12))
+      const yearEnd = new Date(Date.UTC(yearNumber, 11, 31, 12))
+      const existingYear = await tx.academicYear.findUnique({ where: { year: yearNumber } })
+      const academicYear = existingYear ?? await tx.academicYear.create({
+        data: {
+          year: yearNumber,
+          startDate: yearStart,
+          endDate: yearEnd,
+          active: true,
+          terms: {
+            create: [1, 2, 3, 4].map(termNumber => {
+              const termStart = new Date(yearStart.getTime() + (yearEnd.getTime() - yearStart.getTime() + 1) * (termNumber - 1) / 4)
+              const termEnd = new Date(yearStart.getTime() + (yearEnd.getTime() - yearStart.getTime() + 1) * termNumber / 4 - 1)
+              return {
+                termNumber,
+                name: `Term ${termNumber}`,
+                startDate: termStart,
+                endDate: termEnd,
+              }
+            }),
+          },
+        },
+      })
+      if (!academicYear.active) {
+        await tx.academicYear.updateMany({ where: { active: true }, data: { active: false } })
+        await tx.academicYear.update({ where: { id: academicYear.id }, data: { active: true } })
+      }
+
       // Create or update SchoolSettings
       if (existing) {
         await tx.schoolSettings.update({

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { setupIfNeeded, loginAsAdmin, TEST_ADMIN } from './helpers'
+import { setupIfNeeded, loginAsAdmin, TEST_ADMIN, TEST_SCHOOL } from './helpers'
 
 test.describe('Setup wizard + login', () => {
   test('runs setup wizard on first visit', async ({ page }) => {
@@ -7,6 +7,11 @@ test.describe('Setup wizard + login', () => {
     if (setupRan) {
       // Redirected to dashboard after setup
       await expect(page).toHaveURL(/\/dashboard/)
+      await page.goto('/settings')
+      await page.getByRole('tab', { name: /academic years/i }).click()
+      await expect(page.getByText(TEST_SCHOOL.currentYear, { exact: true })).toBeVisible()
+      await expect(page.getByText(/· 4 terms/i)).toBeVisible()
+      await expect(page.getByText('Active', { exact: true })).toBeVisible()
     } else {
       // Already set up — just verify login still works
       await loginAsAdmin(page)

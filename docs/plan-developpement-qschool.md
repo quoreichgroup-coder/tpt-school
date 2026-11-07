@@ -28,7 +28,7 @@ L’écran mobile a des onglets distincts pour le résumé, les bulletins, le pl
 
 ### Étape 0 — Fiabiliser la base de lancement (P0)
 
-La migration SQLite vers PostgreSQL est faite et contrôlée. L’assistant valide les données côté serveur et protège la création initiale par une transaction sérialisable; le parcours a passé son scénario E2E sur une base vierge. Le script de sauvegarde écrit un dump temporaire, vérifie son archive puis le publie atomiquement; `scripts/verify-postgres-backup.sh` a restauré et validé une sauvegarde dans une base temporaire, ensuite supprimée. Garder l’URL temporaire limitée aux essais; choisir le domaine HTTPS et remplacer l’URL de tunnel dans les environnements EAS avant une diffusion externe.
+La migration SQLite vers PostgreSQL est faite et contrôlée. L’assistant valide les données côté serveur et protège la création initiale par une transaction sérialisable; il crée aussi l’année scolaire active et ses quatre trimestres pour rendre immédiatement disponibles classes, présences et notes. Ce comportement est couvert par le scénario E2E de première installation sur base vierge. Le script de sauvegarde écrit un dump temporaire, vérifie son archive puis le publie atomiquement; `scripts/verify-postgres-backup.sh` a restauré et validé une sauvegarde dans une base temporaire, ensuite supprimée. Garder l’URL temporaire limitée aux essais; choisir le domaine HTTPS et remplacer l’URL de tunnel dans les environnements EAS avant une diffusion externe.
 
 **État :** import exécuté; `/api/health` confirme PostgreSQL et les relations importées sont valides. Le domaine permanent reste à définir avant publication.
 
