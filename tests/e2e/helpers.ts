@@ -17,9 +17,9 @@ export const TEST_SCHOOL = {
  */
 export async function loginAs(page: Page, email: string, password: string) {
   await page.goto('/login')
-  await page.getByLabel('Email address').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByLabel(/adresse e-mail|email address/i).fill(email)
+  await page.getByLabel(/mot de passe|password/i).fill(password)
+  await page.getByRole('button', { name: /se connecter|sign in/i }).click()
   await page.waitForURL('**/dashboard', { timeout: 10_000 })
   await expect(page).toHaveURL(/\/dashboard/)
 }
@@ -33,29 +33,31 @@ export async function loginAsAdmin(page: Page) {
  * Returns true if setup was performed, false if already set up.
  */
 export async function setupIfNeeded(page: Page): Promise<boolean> {
-  await page.goto('/')
+  // The root route redirects to the protected dashboard; visit the public setup
+  // route directly so a fresh database does not get mistaken for a logged-out app.
+  await page.goto('/setup')
   await page.waitForURL(/\/(setup|login|dashboard)/, { timeout: 10_000 })
 
   if (!page.url().includes('/setup')) return false
 
   // Step 1 — School info
-  await page.getByLabel(/School Name/).fill(TEST_SCHOOL.name)
-  await page.getByLabel(/Short Name/).fill(TEST_SCHOOL.shortName)
+  await page.getByLabel(/Nom de l’établissement|School Name/i).fill(TEST_SCHOOL.name)
+  await page.getByLabel(/Nom court|Short Name/i).fill(TEST_SCHOOL.shortName)
 
   const yearInput = page.locator('input[name="currentYear"], input[placeholder*="year" i], input[id*="year" i]').first()
   await yearInput.fill(TEST_SCHOOL.currentYear)
 
-  await page.getByRole('button', { name: /next/i }).click()
+  await page.getByRole('button', { name: 'Continuer', exact: true }).click()
 
   // Step 2 — Admin account
-  await page.getByLabel(/Admin Name|Full Name/i).fill(TEST_ADMIN.name)
-  await page.getByLabel(/Admin Email|Email/i).fill(TEST_ADMIN.email)
-  await page.getByLabel(/^Password/).fill(TEST_ADMIN.password)
-  await page.getByLabel(/Confirm Password/i).fill(TEST_ADMIN.password)
-  await page.getByRole('button', { name: /next/i }).click()
+  await page.getByLabel(/Nom complet|Admin Name|Full Name/i).fill(TEST_ADMIN.name)
+  await page.getByLabel(/Adresse e-mail|Admin Email|Email/i).fill(TEST_ADMIN.email)
+  await page.getByLabel(/^Mot de passe|^Password/i).fill(TEST_ADMIN.password)
+  await page.getByLabel(/Confirmer le mot de passe|Confirm Password/i).fill(TEST_ADMIN.password)
+  await page.getByRole('button', { name: 'Continuer', exact: true }).click()
 
   // Step 3 — Review & confirm
-  await page.getByRole('button', { name: /complete setup|finish|confirm/i }).click()
+  await page.getByRole('button', { name: /terminer la configuration|complete setup|finish|confirm/i }).click()
   await page.waitForURL('**/dashboard', { timeout: 15_000 })
 
   return true

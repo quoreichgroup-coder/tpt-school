@@ -19,14 +19,19 @@ interface PageProps {
 
 export default async function ClassesPage({ searchParams }: PageProps) {
   const user = await requireRole(['admin', 'teacher'])
-  const { yearLevel } = await searchParams
+  const { yearLevel: yearLevelRaw } = await searchParams
+  const requestedYearLevel = Number(yearLevelRaw)
+  const yearLevel = Number.isInteger(requestedYearLevel) && requestedYearLevel >= 1 && requestedYearLevel <= 13
+    ? requestedYearLevel
+    : undefined
 
   const activeYear = await db.academicYear.findFirst({ where: { active: true } })
 
-  const classes = await db.class.findMany({
+  const classes = activeYear ? await db.class.findMany({
     where: {
-      academicYearId: activeYear?.id,
-      ...(yearLevel ? { yearLevel: Number(yearLevel) } : {}),
+      academicYearId: activeYear.id,
+      ...(yearLevel ? { yearLevel } : {}),
+      ...(user.role === 'teacher' ? { teachers: { some: { staff: { userId: user.id } } } } : {}),
     },
     include: {
       room: true,
@@ -37,7 +42,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
       _count: { select: { enrolments: { where: { status: 'active' } } } },
     },
     orderBy: [{ yearLevel: 'asc' }, { name: 'asc' }],
-  })
+  }) : []
 
   const yearLevels = Array.from({ length: 13 }, (_, i) => i + 1)
 
@@ -48,27 +53,27 @@ export default async function ClassesPage({ searchParams }: PageProps) {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Classes</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {activeYear ? `${activeYear.year} Academic Year` : 'No active academic year'}
+            {activeYear ? `Année scolaire ${activeYear.year}` : 'Aucune année scolaire active'}
           </p>
         </div>
         {user.role === 'admin' && (
           <Link href="/classes/new" className={buttonVariants()}>
             <Plus className="w-4 h-4 mr-2" />
-            Add Class
+            Ajouter une classe
           </Link>
         )}
       </div>
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-slate-500 font-medium">Filter by Year Level:</span>
+        <span className="text-sm text-slate-500 font-medium">Filtrer par niveau :</span>
         <Link href="/classes">
-          <Badge variant={!yearLevel ? 'default' : 'outline'} className="cursor-pointer">All</Badge>
+          <Badge variant={!yearLevel ? 'default' : 'outline'} className="cursor-pointer">Tous</Badge>
         </Link>
         {yearLevels.map((yl) => (
           <Link key={yl} href={`/classes?yearLevel=${yl}`}>
-            <Badge variant={yearLevel === String(yl) ? 'default' : 'outline'} className="cursor-pointer">
-              Year {yl}
+            <Badge variant={yearLevel === yl ? 'default' : 'outline'} className="cursor-pointer">
+              Niveau {yl}
             </Badge>
           </Link>
         ))}
@@ -80,12 +85,12 @@ export default async function ClassesPage({ searchParams }: PageProps) {
           <TableHeader>
             <TableRow className="bg-slate-50">
               <TableHead>Code</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Year Level</TableHead>
-              <TableHead>Teacher</TableHead>
-              <TableHead>Room</TableHead>
-              <TableHead className="text-center">Students</TableHead>
+              <TableHead>Nom</TableHead>
+              <TableHead>Matière</TableHead>
+              <TableHead>Niveau</TableHead>
+              <TableHead>Enseignant</TableHead>
+              <TableHead>Salle</TableHead>
+              <TableHead className="text-center">Élèves</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -94,7 +99,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-12 text-slate-400">
                   <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  <p>No classes found</p>
+                  <p>{activeYear ? 'Aucune classe trouvée.' : 'Définissez une année scolaire active pour afficher les classes.'}</p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -107,7 +112,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                     <TableCell className="text-slate-600">{cls.subject ?? '—'}</TableCell>
                     <TableCell>
                       {cls.yearLevel ? (
-                        <Badge variant="secondary">Year {cls.yearLevel}</Badge>
+                        <Badge variant="secondary">Niveau {cls.yearLevel}</Badge>
                       ) : '—'}
                     </TableCell>
                     <TableCell className="text-slate-600">{primaryTeacher}</TableCell>
@@ -125,7 +130,7 @@ export default async function ClassesPage({ searchParams }: PageProps) {
                     <TableCell className="text-right">
                       <Link href={`/classes/${cls.id}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
                         <Eye className="w-4 h-4 mr-1" />
-                        View
+                        Consulter
                       </Link>
                     </TableCell>
                   </TableRow>

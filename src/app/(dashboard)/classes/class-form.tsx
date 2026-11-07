@@ -95,49 +95,49 @@ export default function ClassForm({ rooms, academicYears, staff, classData }: Cl
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Name */}
         <div className="space-y-2">
-          <Label htmlFor="name">Class Name *</Label>
+          <Label htmlFor="name">Nom de la classe *</Label>
           <Input
             id="name"
             name="name"
             defaultValue={classData?.name}
-            placeholder="e.g. Mathematics 10A"
+            placeholder="Ex. : Mathématiques 10A"
             required
           />
         </div>
 
         {/* Code */}
         <div className="space-y-2">
-          <Label htmlFor="code">Class Code *</Label>
+          <Label htmlFor="code">Code de la classe *</Label>
           <Input
             id="code"
             name="code"
             defaultValue={classData?.code}
-            placeholder="e.g. MATH10A"
+            placeholder="Ex. : MATH10A"
             required
           />
         </div>
 
         {/* Subject */}
         <div className="space-y-2">
-          <Label htmlFor="subject">Subject</Label>
+          <Label htmlFor="subject">Matière</Label>
           <Input
             id="subject"
             name="subject"
             defaultValue={classData?.subject ?? ''}
-            placeholder="e.g. Mathematics"
+            placeholder="Ex. : Mathématiques"
           />
         </div>
 
         {/* Year Level */}
         <div className="space-y-2">
-          <Label>Year Level</Label>
+          <Label>Niveau scolaire</Label>
           <Select value={yearLevel} onValueChange={(v) => { if (v !== null) setYearLevel(v) }}>
             <SelectTrigger>
-              <SelectValue placeholder="Select year level" />
+              <SelectValue placeholder="Sélectionner un niveau" />
             </SelectTrigger>
             <SelectContent>
               {yearLevels.map((yl) => (
-                <SelectItem key={yl} value={String(yl)}>Year {yl}</SelectItem>
+                <SelectItem key={yl} value={String(yl)}>Niveau {yl}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -145,7 +145,7 @@ export default function ClassForm({ rooms, academicYears, staff, classData }: Cl
 
         {/* Max Students */}
         <div className="space-y-2">
-          <Label htmlFor="maxStudents">Max Students</Label>
+          <Label htmlFor="maxStudents">Effectif maximal</Label>
           <Input
             id="maxStudents"
             name="maxStudents"
@@ -158,15 +158,15 @@ export default function ClassForm({ rooms, academicYears, staff, classData }: Cl
 
         {/* Academic Year */}
         <div className="space-y-2">
-          <Label>Academic Year *</Label>
+          <Label>Année scolaire *</Label>
           <Select value={academicYearId} onValueChange={(v) => { if (v !== null) setAcademicYearId(v) }} required>
             <SelectTrigger>
-              <SelectValue placeholder="Select academic year" />
+              <SelectValue placeholder="Sélectionner une année scolaire" />
             </SelectTrigger>
             <SelectContent>
               {academicYears.map((ay) => (
                 <SelectItem key={ay.id} value={ay.id}>
-                  {ay.year}{ay.active ? ' (Active)' : ''}
+                  {ay.year}{ay.active ? ' (En cours)' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -175,13 +175,13 @@ export default function ClassForm({ rooms, academicYears, staff, classData }: Cl
 
         {/* Room */}
         <div className="space-y-2">
-          <Label>Room</Label>
+          <Label>Salle</Label>
           <Select value={roomId} onValueChange={(v) => setRoomId(v ?? '')}>
             <SelectTrigger>
-              <SelectValue placeholder="Select room" />
+              <SelectValue placeholder="Sélectionner une salle" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No room assigned</SelectItem>
+              <SelectItem value="">Aucune salle attribuée</SelectItem>
               {rooms.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
                   {r.name} ({r.code})
@@ -193,13 +193,13 @@ export default function ClassForm({ rooms, academicYears, staff, classData }: Cl
 
         {/* Primary Teacher */}
         <div className="space-y-2">
-          <Label>Primary Teacher</Label>
+          <Label>Enseignant principal</Label>
           <Select value={staffId} onValueChange={(v) => setStaffId(v ?? '')}>
             <SelectTrigger>
-              <SelectValue placeholder="Select teacher" />
+              <SelectValue placeholder="Sélectionner un enseignant" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No teacher assigned</SelectItem>
+              <SelectItem value="">Aucun enseignant attribué</SelectItem>
               {staff.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.user.name}
@@ -217,14 +217,14 @@ export default function ClassForm({ rooms, academicYears, staff, classData }: Cl
           id="description"
           name="description"
           defaultValue={classData?.description ?? ''}
-          placeholder="Optional class description..."
+          placeholder="Description facultative de la classe…"
           rows={3}
         />
       </div>
 
       <div className="flex gap-3">
         <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : classData ? 'Update Class' : 'Create Class'}
+          {loading ? 'Enregistrement…' : classData ? 'Mettre à jour la classe' : 'Créer la classe'}
         </Button>
         <Button
           type="button"
@@ -232,7 +232,7 @@ export default function ClassForm({ rooms, academicYears, staff, classData }: Cl
           onClick={() => router.back()}
           disabled={loading}
         >
-          Cancel
+          Annuler
         </Button>
       </div>
     </form>

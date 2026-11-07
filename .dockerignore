@@ -11,3 +11,15 @@ prisma/dev.db-wal
 prisma/dev.db-shm
 .env.local
 .env.development.local
+
+.env
+.env.*
+**/*.db
+**/*.db-*
+**/node_modules
+src/generated
+electron
+backups
+test-results
+playwright-report
+*.pdf

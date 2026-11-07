@@ -1,15 +1,15 @@
-import { requireSession } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
 import ComposeForm from '../../compose-form'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
 export default async function ComposePage() {
-  const user = await requireSession()
+  const user = await requireRole(['admin', 'teacher', 'parent', 'student'])
 
   // Get all active users except self
   const users = await db.user.findMany({
-    where: { active: true, id: { not: user.id } },
+    where: { active: true, id: { not: user.id }, role: { in: ['admin', 'teacher', 'parent', 'student'] } },
     select: { id: true, name: true, email: true, role: true },
     orderBy: { name: 'asc' },
   })

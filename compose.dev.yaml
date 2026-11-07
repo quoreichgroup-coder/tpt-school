@@ -1,0 +1,23 @@
+services:
+  web:
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+      ALLOWED_DEV_ORIGINS: ${TUNNEL_HOST:-}
+      SERVER_ACTION_ALLOWED_ORIGINS: ${TUNNEL_HOST:-}
+    volumes:
+      - ./src:/app/src
+      - prisma_generated_dev:/app/src/generated/prisma
+      - ./public:/app/public
+      - ./next.config.ts:/app/next.config.ts:ro
+      - ./prisma/schema.prisma:/app/prisma/schema.prisma:ro
+      - ./prisma.config.ts:/app/prisma.config.ts:ro
+      - ./prisma/migrations-postgresql:/app/prisma/migrations-postgresql:ro
+    command: [sh, -c, "npx prisma generate && npm run dev -- --hostname 0.0.0.0"]
+  db:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+
+volumes:
+  prisma_generated_dev:

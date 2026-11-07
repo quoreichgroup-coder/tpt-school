@@ -4,7 +4,7 @@ import { ChevronLeft } from 'lucide-react'
 import StudentForm from '../student-form'
 
 export default async function NewStudentPage() {
-  await requireRole(['admin', 'teacher'])
+  await requireRole(['admin'])
 
   return (
     <div className="space-y-6">
@@ -14,11 +14,11 @@ export default async function NewStudentPage() {
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-4"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back to Students
+          Retour aux élèves
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Enrol New Student</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Inscrire un nouvel élève</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Fill in the details below to enrol a new student. A temporary password will be set — the student should change it on first login.
+          Renseignez les informations de l’élève. Un mot de passe temporaire sera créé; l’élève devra le modifier lors de sa première connexion.
         </p>
       </div>
 

@@ -3,14 +3,19 @@ import { db } from '@/lib/db'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import FeeTypeForm from './fee-type-form'
-import { Card, CardContent } from '@/components/ui/card'
+
+const FREQUENCY_LABELS: Record<string, string> = {
+  annual: 'Annuelle', term: 'Par trimestre', 'once-off': 'Ponctuelle',
+}
+
+const STATUS_LABELS = { active: 'Actif', inactive: 'Inactif' }
 
 function formatCurrency(amount: number, symbol: string) {
   return `${symbol}${amount.toFixed(2)}`
 }
 
 export default async function FeeTypesPage() {
-  await requireRole(['admin'])
+  await requireRole(['admin', 'accountant'])
 
   const settings = await db.schoolSettings.findFirst()
   const currencySymbol = settings?.currencySymbol ?? '$'
@@ -25,10 +30,10 @@ export default async function FeeTypesPage() {
           className="inline-flex items-center text-sm text-slate-500 hover:text-slate-700 mb-4"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Finance
+          Retour aux finances
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Fee Types</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Define the types of fees charged to students.</p>
+        <h1 className="text-2xl font-bold text-slate-900">Types de frais</h1>
+        <p className="text-sm text-slate-500 mt-0.5">Définissez les frais facturés aux élèves.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -41,18 +46,18 @@ export default async function FeeTypesPage() {
         <div className="lg:col-span-2">
           {feeTypes.length === 0 ? (
             <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-lg">
-              No fee types defined yet.
+              Aucun type de frais défini.
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-slate-100">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Name</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Amount</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Frequency</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Year Level</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Nom</th>
+                    <th className="text-right px-4 py-3 font-medium text-slate-600">Montant</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Fréquence</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Niveau</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Statut</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -65,11 +70,11 @@ export default async function FeeTypesPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-slate-900">
-                        {formatCurrency(ft.amount, currencySymbol)}
+                        {formatCurrency(Number(ft.amount), currencySymbol)}
                       </td>
-                      <td className="px-4 py-3 text-slate-600 capitalize">{ft.frequency}</td>
+                      <td className="px-4 py-3 text-slate-600">{FREQUENCY_LABELS[ft.frequency] ?? ft.frequency}</td>
                       <td className="px-4 py-3 text-slate-600">
-                        {ft.yearLevel != null ? `Year ${ft.yearLevel}` : 'All years'}
+                        {ft.yearLevel != null ? `Niveau ${ft.yearLevel}` : 'Tous les niveaux'}
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -79,7 +84,7 @@ export default async function FeeTypesPage() {
                               : 'bg-slate-100 text-slate-500'
                           }`}
                         >
-                          {ft.active ? 'Active' : 'Inactive'}
+                          {ft.active ? STATUS_LABELS.active : STATUS_LABELS.inactive}
                         </span>
                       </td>
                     </tr>

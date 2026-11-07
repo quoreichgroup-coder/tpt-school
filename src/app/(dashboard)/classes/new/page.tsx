@@ -21,10 +21,10 @@ export default async function NewClassPage() {
           className="inline-flex items-center text-sm text-slate-500 hover:text-slate-700 mb-4"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Classes
+          Retour aux classes
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">New Class</h1>
-        <p className="text-sm text-slate-500 mt-1">Create a new class for the academic year</p>
+        <h1 className="text-2xl font-bold text-slate-900">Nouvelle classe</h1>
+        <p className="text-sm text-slate-500 mt-1">Créez une classe pour l’année scolaire.</p>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">

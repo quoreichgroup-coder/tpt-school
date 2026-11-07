@@ -8,16 +8,16 @@ test.describe('Finance module', () => {
 
   test('finance dashboard loads', async ({ page }) => {
     await page.goto('/finance')
-    await expect(page.getByRole('heading', { name: /finance/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /finances|finance/i })).toBeVisible()
   })
 
   test('fee types page loads', async ({ page }) => {
     await page.goto('/finance/fee-types')
-    await expect(page.getByRole('heading', { name: /fee type/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /types de frais|fee type/i })).toBeVisible()
   })
 
   test('new invoice form renders', async ({ page }) => {
     await page.goto('/finance/invoices/new')
-    await expect(page.getByRole('heading', { name: /invoice/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /facture|invoice/i })).toBeVisible()
   })
 })

@@ -8,7 +8,7 @@ import StudentForm from '../../student-form'
 type Params = Promise<{ id: string }>
 
 export default async function EditStudentPage({ params }: { params: Params }) {
-  await requireRole(['admin', 'teacher'])
+  await requireRole(['admin'])
   const { id } = await params
 
   const student = await db.student.findUnique({

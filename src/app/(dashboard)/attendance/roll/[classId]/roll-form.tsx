@@ -25,10 +25,10 @@ interface RollFormProps {
 type StatusValue = 'present' | 'absent' | 'late' | 'excused'
 
 const STATUS_OPTIONS: { value: StatusValue; label: string; color: string; activeColor: string }[] = [
-  { value: 'present', label: 'Present', color: 'border-slate-200 text-slate-600 hover:border-green-300 hover:text-green-700', activeColor: 'border-green-500 bg-green-50 text-green-700' },
+  { value: 'present', label: 'Présent', color: 'border-slate-200 text-slate-600 hover:border-green-300 hover:text-green-700', activeColor: 'border-green-500 bg-green-50 text-green-700' },
   { value: 'absent', label: 'Absent', color: 'border-slate-200 text-slate-600 hover:border-red-300 hover:text-red-700', activeColor: 'border-red-500 bg-red-50 text-red-700' },
-  { value: 'late', label: 'Late', color: 'border-slate-200 text-slate-600 hover:border-yellow-300 hover:text-yellow-700', activeColor: 'border-yellow-500 bg-yellow-50 text-yellow-700' },
-  { value: 'excused', label: 'Excused', color: 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700', activeColor: 'border-blue-500 bg-blue-50 text-blue-700' },
+  { value: 'late', label: 'En retard', color: 'border-slate-200 text-slate-600 hover:border-yellow-300 hover:text-yellow-700', activeColor: 'border-yellow-500 bg-yellow-50 text-yellow-700' },
+  { value: 'excused', label: 'Excusé', color: 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700', activeColor: 'border-blue-500 bg-blue-50 text-blue-700' },
 ]
 
 export default function RollForm({ classId, students, termId, markedById }: RollFormProps) {
@@ -128,13 +128,17 @@ export default function RollForm({ classId, students, termId, markedById }: Roll
       return
     }
 
-    const result = await saveAttendanceAction(classId, records)
-    setSaving(false)
-    if (result.error) {
-      setError(result.error)
-    } else {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+    try {
+      const result = await saveAttendanceAction(classId, records)
+      if (result.error) setError(result.error)
+      else {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch {
+      setError('Impossible d’enregistrer les présences. Réessayez.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -149,7 +153,7 @@ export default function RollForm({ classId, students, termId, markedById }: Roll
     return (
       <div className="text-center py-12 text-slate-400">
         <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" />
-        <p>No students enrolled in this class</p>
+        <p>Aucun élève n’est inscrit dans cette classe.</p>
       </div>
     )
   }
@@ -160,7 +164,7 @@ export default function RollForm({ classId, students, termId, markedById }: Roll
       {!isOnline && (
         <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-4 py-3 text-sm flex items-center gap-2">
           <WifiOff className="w-4 h-4 shrink-0" />
-          You are offline. Attendance will be saved to this device and synced automatically when you reconnect.
+          Vous êtes hors ligne. Les présences seront enregistrées sur cet appareil et synchronisées dès le retour de la connexion.
         </div>
       )}
 
@@ -169,11 +173,11 @@ export default function RollForm({ classId, students, termId, markedById }: Roll
         <div className="bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-4 py-3 text-sm flex items-center gap-2">
           <RefreshCw className={`w-4 h-4 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
           {syncing
-            ? `Syncing ${pendingCount} queued record(s)…`
-            : `${pendingCount} queued record(s) pending sync.`}
+            ? `Synchronisation de ${pendingCount} saisie(s) en attente…`
+            : `${pendingCount} saisie(s) en attente de synchronisation.`}
           {!syncing && (
             <button type="button" onClick={flushQueue} className="underline ml-1 font-medium">
-              Sync now
+              Synchroniser
             </button>
           )}
         </div>
@@ -189,22 +193,22 @@ export default function RollForm({ classId, students, termId, markedById }: Roll
         <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 text-sm flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           {savedOffline
-            ? 'Saved locally — will sync when you reconnect.'
-            : 'Attendance saved successfully'}
+            ? 'Enregistré sur cet appareil. La synchronisation aura lieu dès le retour de la connexion.'
+            : 'Présences enregistrées.'}
         </div>
       )}
 
       {/* Summary bar */}
       <div className="flex flex-wrap gap-3 bg-slate-50 rounded-xl p-4 items-center">
-        <span className="text-sm font-medium text-slate-600 mr-2">Summary:</span>
-        <span className="flex items-center gap-1.5 text-sm text-green-700"><CheckCircle2 className="w-4 h-4" />{summary.present} Present</span>
-        <span className="flex items-center gap-1.5 text-sm text-red-600"><XCircle className="w-4 h-4" />{summary.absent} Absent</span>
-        <span className="flex items-center gap-1.5 text-sm text-yellow-600"><Clock className="w-4 h-4" />{summary.late} Late</span>
-        <span className="flex items-center gap-1.5 text-sm text-blue-600"><BookOpen className="w-4 h-4" />{summary.excused} Excused</span>
+        <span className="text-sm font-medium text-slate-600 mr-2">Récapitulatif :</span>
+        <span className="flex items-center gap-1.5 text-sm text-green-700"><CheckCircle2 className="w-4 h-4" />{summary.present} présent(s)</span>
+        <span className="flex items-center gap-1.5 text-sm text-red-600"><XCircle className="w-4 h-4" />{summary.absent} absent(s)</span>
+        <span className="flex items-center gap-1.5 text-sm text-yellow-600"><Clock className="w-4 h-4" />{summary.late} en retard</span>
+        <span className="flex items-center gap-1.5 text-sm text-blue-600"><BookOpen className="w-4 h-4" />{summary.excused} excusé(s)</span>
 
         <div className="ml-auto flex gap-2">
-          <span className="text-xs text-slate-500 self-center">Mark all:</span>
-          <Button type="button" variant="outline" size="sm" onClick={() => setAll('present')} className="text-green-700 border-green-200 hover:bg-green-50">Present</Button>
+          <span className="text-xs text-slate-500 self-center">Tout marquer :</span>
+          <Button type="button" variant="outline" size="sm" onClick={() => setAll('present')} className="text-green-700 border-green-200 hover:bg-green-50">Présent</Button>
           <Button type="button" variant="outline" size="sm" onClick={() => setAll('absent')} className="text-red-600 border-red-200 hover:bg-red-50">Absent</Button>
         </div>
       </div>
@@ -244,7 +248,7 @@ export default function RollForm({ classId, students, termId, markedById }: Roll
               {(currentStatus === 'absent' || currentStatus === 'late' || currentStatus === 'excused') && (
                 <div className="mt-3 pl-11">
                   <Textarea
-                    placeholder="Notes (optional)..."
+                    placeholder="Note (facultative)…"
                     value={notes[student.studentId] ?? ''}
                     onChange={(e) => setNotes({ ...notes, [student.studentId]: e.target.value })}
                     rows={2}
@@ -259,7 +263,7 @@ export default function RollForm({ classId, students, termId, markedById }: Roll
 
       <div className="sticky bottom-4">
         <Button type="submit" disabled={saving} className="w-full sm:w-auto shadow-lg">
-          {saving ? 'Saving…' : isOnline ? 'Save Attendance' : 'Save Offline'}
+          {saving ? 'Enregistrement…' : isOnline ? 'Enregistrer les présences' : 'Enregistrer hors ligne'}
         </Button>
       </div>
     </form>

@@ -1,12 +1,13 @@
 import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import RollForm from './roll-form'
 import CodePanel from './code-panel'
 import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
 interface PageProps {
   params: Promise<{ classId: string }>
@@ -15,6 +16,7 @@ interface PageProps {
 export default async function TakeRollPage({ params }: PageProps) {
   const session = await requireRole(['admin', 'teacher'])
   const { classId } = await params
+  const activeYear = await db.academicYear.findFirst({ where: { active: true }, select: { id: true } })
 
   const cls = await db.class.findUnique({
     where: { id: classId },
@@ -28,7 +30,14 @@ export default async function TakeRollPage({ params }: PageProps) {
     },
   })
 
-  if (!cls) notFound()
+  if (!cls || !activeYear || cls.academicYearId !== activeYear.id) notFound()
+  if (session.role === 'teacher') {
+    const assigned = await db.classTeacher.findFirst({
+      where: { classId, staff: { userId: session.id } },
+      select: { classId: true },
+    })
+    if (!assigned) redirect('/unauthorized')
+  }
 
   // Get today's existing attendance records
   const today = new Date()
@@ -62,7 +71,7 @@ export default async function TakeRollPage({ params }: PageProps) {
     existingNotes: existingMap.get(enrolment.student.id)?.notes ?? undefined,
   }))
 
-  const todayDisplay = format(new Date(), 'EEEE, d MMMM yyyy')
+  const todayDisplay = format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })
 
   return (
     <div className="space-y-6">
@@ -72,7 +81,7 @@ export default async function TakeRollPage({ params }: PageProps) {
           className="inline-flex items-center text-sm text-slate-500 hover:text-slate-700 mb-4"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Attendance
+          Retour aux présences
         </Link>
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
@@ -80,13 +89,13 @@ export default async function TakeRollPage({ params }: PageProps) {
             <p className="text-sm text-slate-500 mt-1">{todayDisplay}</p>
           </div>
           <div className="flex items-center gap-2">
-            {cls.yearLevel && <Badge variant="secondary">Year {cls.yearLevel}</Badge>}
+            {cls.yearLevel && <Badge variant="secondary">Niveau {cls.yearLevel}</Badge>}
             {cls.room && (
               <Badge variant="outline" className="font-mono">{cls.room.code}</Badge>
             )}
-            <Badge variant="outline">{students.length} students</Badge>
+            <Badge variant="outline">{students.length} élèves</Badge>
             {existingRecords.length > 0 && (
-              <Badge className="bg-green-100 text-green-700 border-0">Roll taken</Badge>
+              <Badge className="bg-green-100 text-green-700 border-0">Appel effectué</Badge>
             )}
           </div>
         </div>

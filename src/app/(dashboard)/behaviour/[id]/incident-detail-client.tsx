@@ -20,7 +20,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 type Props = {
   incident: {
@@ -35,10 +34,11 @@ type Props = {
     followUpRequired: boolean
     followUpNotes: string | null
   }
+  canEdit: boolean
   canSuspend: boolean
 }
 
-export default function IncidentDetailClient({ incident, canSuspend }: Props) {
+export default function IncidentDetailClient({ incident, canEdit, canSuspend }: Props) {
   const [editing, setEditing] = useState(false)
   const [showSuspension, setShowSuspension] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -92,9 +92,9 @@ export default function IncidentDetailClient({ incident, canSuspend }: Props) {
 
       {/* Action buttons */}
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => { setEditing(true); setSuccessMsg(null) }}>
+        {canEdit && <Button variant="outline" size="sm" onClick={() => { setEditing(true); setSuccessMsg(null) }}>
           Edit Incident
-        </Button>
+        </Button>}
         {canSuspend && (
           <Button variant="destructive" size="sm" onClick={() => { setShowSuspension(true); setSuccessMsg(null) }}>
             Add Suspension

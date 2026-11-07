@@ -15,13 +15,21 @@ export default function CodePanel({ classId, termId }: CodePanelProps) {
   const [expiresAt, setExpiresAt] = useState<Date | null>(null)
   const [secondsLeft, setSecondsLeft] = useState(0)
   const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const generate = useCallback(async () => {
     setGenerating(true)
+    setError(null)
     try {
       const result = await generateAttendanceCodeAction(classId, termId)
-      setCode(result.code)
-      setExpiresAt(new Date(result.expiresAt))
+      if ('error' in result) {
+        setError(result.error)
+      } else {
+        setCode(result.code)
+        setExpiresAt(new Date(result.expiresAt))
+      }
+    } catch {
+      setError('Impossible de générer un code de présence. Réessayez.')
     } finally {
       setGenerating(false)
     }
@@ -47,16 +55,18 @@ export default function CodePanel({ classId, termId }: CodePanelProps) {
     <div className="bg-white rounded-xl border border-slate-200 p-5">
       <div className="flex items-center gap-2 mb-4">
         <QrCode className="w-4 h-4 text-slate-500" />
-        <h3 className="text-sm font-semibold text-slate-700">Attendance Code</h3>
+        <h3 className="text-sm font-semibold text-slate-700">Code de présence</h3>
       </div>
+
+      {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
 
       {code === null ? (
         <div className="text-center py-4">
           <p className="text-sm text-slate-500 mb-3">
-            Generate a 6-digit code. Students enter it in their portal to mark themselves present.
+            Générez un code à 6 chiffres. Les élèves le saisissent dans leur portail pour signaler leur présence.
           </p>
           <Button type="button" variant="outline" onClick={generate} disabled={generating}>
-            {generating ? 'Generating…' : 'Generate Code'}
+            {generating ? 'Génération…' : 'Générer un code'}
           </Button>
         </div>
       ) : (
@@ -70,10 +80,10 @@ export default function CodePanel({ classId, termId }: CodePanelProps) {
           </div>
 
           {expired ? (
-            <p className="text-sm text-red-500 mb-3">Code expired</p>
+            <p className="text-sm text-red-500 mb-3">Code expiré</p>
           ) : (
             <p className="text-sm text-slate-500 mb-3">
-              Expires in{' '}
+              Expire dans{' '}
               <span className={`font-medium ${secondsLeft < 60 ? 'text-red-600' : 'text-slate-700'}`}>
                 {mins > 0 ? `${mins}m ` : ''}{String(secs).padStart(2, '0')}s
               </span>
@@ -89,7 +99,7 @@ export default function CodePanel({ classId, termId }: CodePanelProps) {
             className="gap-1.5"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
-            {expired ? 'Generate New Code' : 'Regenerate'}
+            {expired ? 'Générer un nouveau code' : 'Régénérer'}
           </Button>
         </div>
       )}

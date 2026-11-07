@@ -24,20 +24,28 @@ import { UserPlus, Upload, Search } from 'lucide-react'
 type SearchParams = Promise<{ q?: string; yearLevel?: string; status?: string }>
 
 const STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  active: { label: 'Active', variant: 'default' },
-  inactive: { label: 'Inactive', variant: 'secondary' },
-  graduated: { label: 'Graduated', variant: 'outline' },
-  transferred: { label: 'Transferred', variant: 'outline' },
+  active: { label: 'Inscrit', variant: 'default' },
+  inactive: { label: 'Inactif', variant: 'secondary' },
+  graduated: { label: 'Diplômé', variant: 'outline' },
+  transferred: { label: 'Transféré', variant: 'outline' },
 }
 
 export default async function StudentsPage({ searchParams }: { searchParams: SearchParams }) {
-  await requireRole(['admin', 'teacher'])
+  const session = await requireRole(['admin', 'teacher'])
 
   const { q = '', yearLevel = '', status = '' } = await searchParams
 
   const students = await db.student.findMany({
     where: {
       AND: [
+        ...(session.role === 'teacher' ? [{
+          classEnrolments: {
+            some: {
+              status: 'active',
+              class: { teachers: { some: { staff: { userId: session.id } } } },
+            },
+          },
+        }] : []),
         q
           ? {
               OR: [
@@ -59,21 +67,21 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Students</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Élèves</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {students.length} student{students.length !== 1 ? 's' : ''} found
+            {students.length} élève{students.length !== 1 ? 's' : ''} trouvé{students.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex gap-2">
+        {session.role === 'admin' && <div className="flex gap-2">
           <Link href="/students/import" className={buttonVariants({ variant: 'outline' })}>
             <Upload className="w-4 h-4" />
-            Import CSV
+            Importer un fichier CSV
           </Link>
           <Link href="/students/new" className={buttonVariants()}>
             <UserPlus className="w-4 h-4" />
-            Add Student
+            Ajouter un élève
           </Link>
-        </div>
+        </div>}
       </div>
 
       {/* Filters */}
@@ -83,20 +91,20 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
           <Input
             name="q"
             defaultValue={q}
-            placeholder="Search by name or student ID…"
+            placeholder="Rechercher par nom ou matricule…"
             className="pl-8 w-full"
           />
         </div>
 
         <Select name="yearLevel" defaultValue={yearLevel || 'all'}>
           <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Year Level" />
+            <SelectValue placeholder="Niveau scolaire" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Years</SelectItem>
+            <SelectItem value="all">Tous les niveaux</SelectItem>
             {Array.from({ length: 13 }, (_, i) => i + 1).map((yr) => (
               <SelectItem key={yr} value={String(yr)}>
-                Year {yr}
+                Niveau {yr}
               </SelectItem>
             ))}
           </SelectContent>
@@ -104,19 +112,19 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
 
         <Select name="status" defaultValue={status || 'all'}>
           <SelectTrigger className="w-full sm:w-44">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder="Statut" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="graduated">Graduated</SelectItem>
-            <SelectItem value="transferred">Transferred</SelectItem>
+            <SelectItem value="all">Tous les statuts</SelectItem>
+            <SelectItem value="active">Inscrit</SelectItem>
+            <SelectItem value="inactive">Inactif</SelectItem>
+            <SelectItem value="graduated">Diplômé</SelectItem>
+            <SelectItem value="transferred">Transféré</SelectItem>
           </SelectContent>
         </Select>
 
         <Button type="submit" variant="outline">
-          Filter
+          Filtrer
         </Button>
       </form>
 
@@ -125,11 +133,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50">
-              <TableHead className="font-semibold text-slate-700">Student ID</TableHead>
-              <TableHead className="font-semibold text-slate-700">Name</TableHead>
-              <TableHead className="font-semibold text-slate-700">Year Level</TableHead>
-              <TableHead className="font-semibold text-slate-700">Status</TableHead>
-              <TableHead className="font-semibold text-slate-700">Enrolment Date</TableHead>
+              <TableHead className="font-semibold text-slate-700">Matricule</TableHead>
+              <TableHead className="font-semibold text-slate-700">Nom</TableHead>
+              <TableHead className="font-semibold text-slate-700">Niveau</TableHead>
+              <TableHead className="font-semibold text-slate-700">Statut</TableHead>
+              <TableHead className="font-semibold text-slate-700">Date d’inscription</TableHead>
               <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -137,7 +145,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
             {students.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-12 text-slate-400">
-                  No students found. Try adjusting your search or filters.
+                  Aucun élève trouvé. Modifiez votre recherche ou vos filtres.
                 </TableCell>
               </TableRow>
             ) : (
@@ -157,7 +165,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                     </TableCell>
                     <TableCell>
                       {student.yearLevel ? (
-                        <span className="text-slate-700">Year {student.yearLevel}</span>
+                        <span className="text-slate-700">Niveau {student.yearLevel}</span>
                       ) : (
                         <span className="text-slate-400">—</span>
                       )}
@@ -166,7 +174,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                       <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                     </TableCell>
                     <TableCell className="text-slate-600 text-sm">
-                      {new Date(student.enrollmentDate).toLocaleDateString('en-NZ', {
+                      {new Date(student.enrollmentDate).toLocaleDateString('fr-FR', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
@@ -174,8 +182,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/students/${student.id}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>View</Link>
-                        <Link href={`/students/${student.id}/edit`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Edit</Link>
+                        <Link href={`/students/${student.id}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>Consulter</Link>
+                        {session.role === 'admin' && (
+                          <Link href={`/students/${student.id}/edit`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Modifier</Link>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

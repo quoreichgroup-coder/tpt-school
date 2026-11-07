@@ -8,19 +8,19 @@ test.describe('Students module', () => {
 
   test('navigates to students list', async ({ page }) => {
     await page.goto('/students')
-    await expect(page.getByRole('heading', { name: /students/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /élèves|students/i })).toBeVisible()
   })
 
   test('creates a new student', async ({ page }) => {
     await page.goto('/students/new')
-    await expect(page.getByRole('heading', { name: /new student|add student/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /inscrire un nouvel élève|new student|add student/i })).toBeVisible()
 
     // Fill required fields
-    await page.getByLabel(/Full Name/i).fill('E2E Student Test')
-    await page.getByLabel(/Email/i).fill(`e2e-student-${Date.now()}@test.school`)
-    await page.getByLabel(/Student ID/i).fill(`ST${Date.now().toString().slice(-6)}`)
+    await page.getByLabel(/Prénom|First Name/i).fill('E2E')
+    await page.getByLabel(/^Nom \*$/).fill('Student Test')
+    await page.getByLabel(/Adresse e-mail|Email Address/i).fill(`e2e-student-${Date.now()}@test.school`)
 
-    await page.getByRole('button', { name: /create|save/i }).click()
+    await page.getByRole('button', { name: /inscrire l’élève|enrol student|create|save/i }).click()
 
     // Should redirect to student list or detail
     await expect(page).toHaveURL(/\/students(\/|$)/, { timeout: 10_000 })

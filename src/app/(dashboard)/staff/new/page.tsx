@@ -14,11 +14,11 @@ export default async function NewStaffPage() {
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-4"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back to Staff
+          Retour au personnel
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Add Staff Member</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Ajouter un membre du personnel</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Fill in the details below to add a new staff member. A temporary password will be set — they should change it on first login.
+          Renseignez les informations du membre. Un mot de passe temporaire sera créé; il devra être modifié lors de sa première connexion.
         </p>
       </div>
 

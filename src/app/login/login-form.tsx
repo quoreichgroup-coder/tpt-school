@@ -2,12 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { loginAction } from './actions'
 
 export default function LoginForm() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -20,9 +22,9 @@ export default function LoginForm() {
     startTransition(async () => {
       const result = await loginAction(email, password)
       if (result.success) {
-        window.location.href = '/dashboard'
+        router.replace('/dashboard')
       } else {
-        setError(result.error ?? 'Sign in failed. Please try again.')
+        setError(result.error ?? 'Échec de la connexion. Veuillez réessayer.')
       }
     })
   }
@@ -31,7 +33,7 @@ export default function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="email" className="text-sm font-medium text-slate-700">
-          Email address
+          Adresse e-mail
         </Label>
         <Input
           id="email"
@@ -48,7 +50,7 @@ export default function LoginForm() {
 
       <div className="space-y-2">
         <Label htmlFor="password" className="text-sm font-medium text-slate-700">
-          Password
+          Mot de passe
         </Label>
         <Input
           id="password"
@@ -74,7 +76,7 @@ export default function LoginForm() {
 
       <div className="flex justify-end -mt-1">
         <Link href="/forgot-password" className="text-xs text-slate-500 hover:text-slate-700 hover:underline">
-          Forgot password?
+          Mot de passe oublié ?
         </Link>
       </div>
 
@@ -89,9 +91,9 @@ export default function LoginForm() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            Signing in…
+            Connexion en cours…
           </span>
-        ) : 'Sign in'}
+        ) : 'Se connecter'}
       </Button>
     </form>
   )

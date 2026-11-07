@@ -16,7 +16,7 @@ import {
   type ProposedSlot,
 } from './actions'
 
-const DAY_NAMES = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+const DAY_NAMES = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
 
 type ClassOption = { id: string; name: string; code: string }
 type RoomOption = { id: string; name: string; code: string }
@@ -62,17 +62,18 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
     if (!addClassId || !addPeriods) return
     setError(null)
     startTransition(async () => {
-      const result = await createRequirementAction({
-        classId: addClassId,
-        staffId: addStaffId || null,
-        preferredRoomId: addRoomId || null,
-        periodsPerWeek: parseInt(addPeriods, 10),
-        label: addLabel || null,
-      })
-      if ('error' in result) {
-        setError(result.error ?? null)
-        return
-      }
+      try {
+        const result = await createRequirementAction({
+          classId: addClassId,
+          staffId: addStaffId || null,
+          preferredRoomId: addRoomId || null,
+          periodsPerWeek: parseInt(addPeriods, 10),
+          label: addLabel || null,
+        })
+        if ('error' in result) {
+          setError(result.error ?? null)
+          return
+        }
       // Optimistic update with fetched data lookup
       const cls = classes.find((c) => c.id === addClassId)
       const staffMember = staff.find((s) => s.id === addStaffId) ?? null
@@ -97,15 +98,22 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
       setAddPeriods('5')
       setAddLabel('')
       setProposedSlots(null)
+      } catch {
+        setError('Impossible d’ajouter cette exigence de planning.')
+      }
     })
   }
 
   function handleDelete(id: string) {
     startTransition(async () => {
-      const result = await deleteRequirementAction(id)
-      if ('error' in result) { setError(result.error ?? null); return }
-      setRequirements((prev) => prev.filter((r) => r.id !== id))
-      setProposedSlots(null)
+      try {
+        const result = await deleteRequirementAction(id)
+        if ('error' in result) { setError(result.error ?? null); return }
+        setRequirements((prev) => prev.filter((r) => r.id !== id))
+        setProposedSlots(null)
+      } catch {
+        setError('Impossible de supprimer cette exigence de planning.')
+      }
     })
   }
 
@@ -113,9 +121,13 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
     setError(null)
     setApplyResult(null)
     startTransition(async () => {
-      const result = await generateScheduleAction()
-      setProposedSlots(result.slots)
-      setWarnings(result.warnings)
+      try {
+        const result = await generateScheduleAction()
+        setProposedSlots(result.slots)
+        setWarnings(result.warnings)
+      } catch {
+        setError('Impossible de générer le planning.')
+      }
     })
   }
 
@@ -123,19 +135,23 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
     if (!proposedSlots) return
     setError(null)
     startTransition(async () => {
-      const result = await applyGeneratedScheduleAction(proposedSlots, clearExisting)
-      setApplyResult(result)
-      if (result.errors.length === 0) setProposedSlots(null)
+      try {
+        const result = await applyGeneratedScheduleAction(proposedSlots, clearExisting)
+        setApplyResult(result)
+        if (result.errors.length === 0) setProposedSlots(null)
+      } catch {
+        setError('Impossible d’appliquer le planning généré.')
+      }
     })
   }
 
   const classOptions = classes.map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))
   const staffOptions = [
-    { value: '', label: 'No staff assigned' },
+    { value: '', label: 'Aucun enseignant attribué' },
     ...staff.map((s) => ({ value: s.id, label: s.user.name })),
   ]
   const roomOptions = [
-    { value: '', label: 'No preferred room' },
+    { value: '', label: 'Aucune salle préférée' },
     ...rooms.map((r) => ({ value: r.id, label: `${r.code} — ${r.name}` })),
   ]
 
@@ -144,23 +160,23 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
       {/* Requirements table */}
       <div className="rounded-lg border bg-white">
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <h3 className="font-semibold text-sm">Scheduling Requirements</h3>
-          <span className="text-xs text-muted-foreground">{requirements.length} requirement{requirements.length !== 1 ? 's' : ''}</span>
+          <h3 className="font-semibold text-sm">Exigences de planification</h3>
+          <span className="text-xs text-muted-foreground">{requirements.length} exigence{requirements.length !== 1 ? 's' : ''}</span>
         </div>
 
         {requirements.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            No requirements yet. Add one below to get started.
+            Aucune exigence. Ajoutez-en une ci-dessous pour commencer.
           </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-slate-50 text-xs text-muted-foreground">
-                <th className="px-4 py-2 text-left font-medium">Class</th>
-                <th className="px-4 py-2 text-left font-medium">Staff</th>
-                <th className="px-4 py-2 text-left font-medium">Preferred Room</th>
-                <th className="px-4 py-2 text-left font-medium">Periods/wk</th>
-                <th className="px-4 py-2 text-left font-medium">Label</th>
+                <th className="px-4 py-2 text-left font-medium">Classe</th>
+                <th className="px-4 py-2 text-left font-medium">Enseignant</th>
+                <th className="px-4 py-2 text-left font-medium">Salle préférée</th>
+                <th className="px-4 py-2 text-left font-medium">Créneaux/semaine</th>
+                <th className="px-4 py-2 text-left font-medium">Libellé</th>
                 <th className="px-4 py-2" />
               </tr>
             </thead>
@@ -194,43 +210,43 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
 
         {/* Add row form */}
         <div className="border-t bg-slate-50/60 px-4 py-3">
-          <p className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Add Requirement</p>
+          <p className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Ajouter une exigence</p>
           <div className="flex flex-wrap gap-2 items-end">
             <div className="flex flex-col gap-1 min-w-[200px]">
-              <Label className="text-xs">Class *</Label>
+              <Label className="text-xs">Classe *</Label>
               <Combobox
                 options={classOptions}
                 value={addClassId}
                 onValueChange={(v) => setAddClassId(v ?? '')}
-                placeholder="Select class"
-                searchPlaceholder="Search classes..."
-                emptyText="No classes found"
+                placeholder="Sélectionner une classe"
+                searchPlaceholder="Rechercher une classe…"
+                emptyText="Aucune classe trouvée"
               />
             </div>
             <div className="flex flex-col gap-1 min-w-[160px]">
-              <Label className="text-xs">Staff</Label>
+              <Label className="text-xs">Enseignant</Label>
               <Combobox
                 options={staffOptions}
                 value={addStaffId}
                 onValueChange={(v) => setAddStaffId(v ?? '')}
-                placeholder="No staff"
-                searchPlaceholder="Search staff..."
-                emptyText="No staff found"
+                placeholder="Aucun enseignant"
+                searchPlaceholder="Rechercher un enseignant…"
+                emptyText="Aucun enseignant trouvé"
               />
             </div>
             <div className="flex flex-col gap-1 min-w-[140px]">
-              <Label className="text-xs">Preferred Room</Label>
+              <Label className="text-xs">Salle préférée</Label>
               <Combobox
                 options={roomOptions}
                 value={addRoomId}
                 onValueChange={(v) => setAddRoomId(v ?? '')}
-                placeholder="No room"
-                searchPlaceholder="Search rooms..."
-                emptyText="No rooms found"
+                placeholder="Aucune salle"
+                searchPlaceholder="Rechercher une salle…"
+                emptyText="Aucune salle trouvée"
               />
             </div>
             <div className="flex flex-col gap-1 w-24">
-              <Label className="text-xs">Periods/wk *</Label>
+              <Label className="text-xs">Créneaux/semaine *</Label>
               <Input
                 type="number"
                 min={1}
@@ -241,11 +257,11 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
               />
             </div>
             <div className="flex flex-col gap-1 min-w-[140px]">
-              <Label className="text-xs">Label (optional)</Label>
+              <Label className="text-xs">Libellé (facultatif)</Label>
               <Input
                 value={addLabel}
                 onChange={(e) => setAddLabel(e.target.value)}
-                placeholder="e.g. Math Year 10"
+                placeholder="Ex. : Mathématiques niveau 10"
                 className="h-8"
               />
             </div>
@@ -256,7 +272,7 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
               className="h-8"
             >
               <Plus className="size-4 mr-1" />
-              Add
+              Ajouter
             </Button>
           </div>
           {error && (
@@ -274,11 +290,11 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
           disabled={requirements.length === 0 || isPending}
         >
           <Wand2 className="size-4 mr-2" />
-          Generate Schedule
+          Générer le planning
         </Button>
         {proposedSlots && (
           <span className="text-sm text-muted-foreground">
-            {proposedSlots.length} slot{proposedSlots.length !== 1 ? 's' : ''} proposed
+            {proposedSlots.length} créneau{proposedSlots.length !== 1 ? 'x' : ''} proposé{proposedSlots.length !== 1 ? 's' : ''}
           </span>
         )}
       </div>
@@ -286,8 +302,8 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
       {/* Warnings */}
       {warnings.length > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-1">
-          <p className="text-sm font-medium text-amber-800 flex items-center gap-1">
-            <AlertCircle className="size-4" /> {warnings.length} warning{warnings.length !== 1 ? 's' : ''}
+            <p className="text-sm font-medium text-amber-800 flex items-center gap-1">
+            <AlertCircle className="size-4" /> {warnings.length} avertissement{warnings.length !== 1 ? 's' : ''}
           </p>
           {warnings.map((w, i) => (
             <p key={i} className="text-xs text-amber-700 pl-5">{w}</p>
@@ -299,19 +315,19 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
       {proposedSlots && proposedSlots.length > 0 && (
         <div className="rounded-lg border bg-white">
           <div className="border-b px-4 py-3">
-            <h3 className="font-semibold text-sm">Proposed Schedule Preview</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Review before applying. This is a preview only — nothing has been saved yet.</p>
+            <h3 className="font-semibold text-sm">Aperçu du planning proposé</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Vérifiez le résultat avant de l’appliquer. Il s’agit d’un aperçu; rien n’a encore été enregistré.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-slate-50 text-xs text-muted-foreground">
-                  <th className="px-4 py-2 text-left font-medium">Day</th>
-                  <th className="px-4 py-2 text-left font-medium">Period</th>
-                  <th className="px-4 py-2 text-left font-medium">Time</th>
-                  <th className="px-4 py-2 text-left font-medium">Class</th>
-                  <th className="px-4 py-2 text-left font-medium">Staff</th>
-                  <th className="px-4 py-2 text-left font-medium">Room</th>
+                  <th className="px-4 py-2 text-left font-medium">Jour</th>
+                  <th className="px-4 py-2 text-left font-medium">Créneau</th>
+                  <th className="px-4 py-2 text-left font-medium">Horaire</th>
+                  <th className="px-4 py-2 text-left font-medium">Classe</th>
+                  <th className="px-4 py-2 text-left font-medium">Enseignant</th>
+                  <th className="px-4 py-2 text-left font-medium">Salle</th>
                   <th className="px-4 py-2 text-left font-medium">Notes</th>
                 </tr>
               </thead>
@@ -355,17 +371,17 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
                 onChange={(e) => setClearExisting(e.target.checked)}
                 className="rounded"
               />
-              Clear existing timetable slots first
+              Effacer d’abord les créneaux existants
             </label>
             <Button onClick={handleApply} disabled={isPending}>
-              Apply Schedule
+              Appliquer le planning
             </Button>
           </div>
         </div>
       )}
 
       {proposedSlots && proposedSlots.length === 0 && (
-        <p className="text-sm text-muted-foreground">No slots could be generated. Check that your requirements don't have too many conflicts.</p>
+        <p className="text-sm text-muted-foreground">Aucun créneau généré. Vérifiez que les exigences ne provoquent pas trop de conflits.</p>
       )}
 
       {/* Apply result */}
@@ -376,8 +392,8 @@ export default function ScheduleGenerator({ requirements: initialRequirements, c
         )}>
           <p className={cn('text-sm font-medium flex items-center gap-1', applyResult.errors.length === 0 ? 'text-green-800' : 'text-amber-800')}>
             {applyResult.errors.length === 0 ? <CheckCircle2 className="size-4" /> : <AlertCircle className="size-4" />}
-            {applyResult.created} slot{applyResult.created !== 1 ? 's' : ''} applied successfully
-            {applyResult.errors.length > 0 && `, ${applyResult.errors.length} error${applyResult.errors.length !== 1 ? 's' : ''}`}
+            {applyResult.created} créneau{applyResult.created !== 1 ? 'x' : ''} appliqué{applyResult.created !== 1 ? 's' : ''} avec succès
+            {applyResult.errors.length > 0 && `, ${applyResult.errors.length} erreur${applyResult.errors.length !== 1 ? 's' : ''}`}
           </p>
           {applyResult.errors.map((e, i) => (
             <p key={i} className="text-xs text-amber-700 pl-5">{e}</p>

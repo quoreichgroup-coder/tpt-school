@@ -5,11 +5,21 @@ import { db } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
 import { sendEmail } from '@/lib/email'
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character]!)
+}
+
 export async function requestPasswordResetAction(
   email: string,
 ): Promise<{ success: boolean; error?: string }> {
   const normalised = email.trim().toLowerCase()
-  if (!normalised) return { success: false, error: 'Email is required.' }
+  if (!normalised) return { success: false, error: 'L’adresse e-mail est obligatoire.' }
 
   // Always return success to avoid user enumeration
   const user = await db.user.findUnique({ where: { email: normalised } })
@@ -26,20 +36,23 @@ export async function requestPasswordResetAction(
   })
 
   const settings = await db.schoolSettings.findFirst()
-  const schoolName = settings?.name ?? 'TPT School'
+  const schoolName = settings?.name ?? 'QSCHOOL'
+  const safeName = escapeHtml(user.name)
+  const safeSchoolName = escapeHtml(schoolName)
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
   const resetUrl = `${baseUrl}/reset-password?token=${token}`
+  const safeResetUrl = escapeHtml(resetUrl)
 
   await sendEmail({
     to: normalised,
-    subject: `Reset your ${schoolName} password`,
+    subject: `Réinitialisation de votre mot de passe ${schoolName}`,
     html: `
-      <p>Hi ${user.name},</p>
-      <p>You requested a password reset for your ${schoolName} account.</p>
-      <p><a href="${resetUrl}" style="background:#0f172a;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">Reset Password</a></p>
-      <p>This link expires in 1 hour. If you did not request a reset, you can ignore this email.</p>
+      <p>Bonjour ${safeName},</p>
+      <p>Vous avez demandé la réinitialisation du mot de passe de votre compte ${safeSchoolName}.</p>
+      <p><a href="${safeResetUrl}" style="background:#0f172a;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">Réinitialiser mon mot de passe</a></p>
+      <p>Ce lien expire dans une heure. Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.</p>
     `,
-    text: `Reset your password: ${resetUrl}\n\nThis link expires in 1 hour.`,
+    text: `Réinitialisez votre mot de passe : ${resetUrl}\n\nCe lien expire dans une heure.`,
   })
 
   return { success: true }
@@ -49,20 +62,20 @@ export async function resetPasswordAction(
   token: string,
   newPassword: string,
 ): Promise<{ success: boolean; error?: string }> {
-  if (!token) return { success: false, error: 'Invalid reset link.' }
+  if (!token) return { success: false, error: 'Lien de réinitialisation invalide.' }
   if (!newPassword || newPassword.length < 8) {
-    return { success: false, error: 'Password must be at least 8 characters.' }
+    return { success: false, error: 'Le mot de passe doit contenir au moins 8 caractères.' }
   }
 
   const record = await db.verificationToken.findUnique({ where: { token } })
-  if (!record) return { success: false, error: 'Invalid or already-used reset link.' }
+  if (!record) return { success: false, error: 'Lien de réinitialisation invalide ou déjà utilisé.' }
   if (record.expires < new Date()) {
     await db.verificationToken.delete({ where: { token } })
-    return { success: false, error: 'This reset link has expired. Please request a new one.' }
+    return { success: false, error: 'Ce lien a expiré. Veuillez en demander un nouveau.' }
   }
 
   const user = await db.user.findUnique({ where: { email: record.identifier } })
-  if (!user || !user.active) return { success: false, error: 'Account not found.' }
+  if (!user || !user.active) return { success: false, error: 'Compte introuvable.' }
 
   const passwordHash = await hashPassword(newPassword)
   await db.user.update({ where: { id: user.id }, data: { passwordHash } })

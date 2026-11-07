@@ -61,6 +61,14 @@ const STATUS_STYLES: Record<string, string> = {
   overdue: 'bg-red-100 text-red-700',
   waived: 'bg-slate-100 text-slate-500',
 }
+const STATUS_LABELS: Record<string, string> = {
+  unpaid: 'Impayée', partial: 'Partiellement payée', paid: 'Payée',
+  overdue: 'En retard', waived: 'Exonérée',
+}
+const METHOD_LABELS: Record<string, string> = {
+  cash: 'Espèces', bank_transfer: 'Virement bancaire', card: 'Carte',
+  cheque: 'Chèque', online: 'En ligne',
+}
 
 function fmtCurrency(amount: number, symbol: string) {
   return `${symbol}${amount.toFixed(2)}`
@@ -82,11 +90,10 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
   function handlePayment(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    const amountNum = parseFloat(amount)
     startTransition(async () => {
       const result = await recordPaymentAction(
         invoice.id,
-        amountNum,
+        amount,
         method,
         reference,
         notes,
@@ -94,7 +101,7 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
       if (result.error) {
         setError(result.error)
       } else {
-        setSuccessMsg('Payment recorded successfully.')
+        setSuccessMsg('Paiement enregistré avec succès.')
         setShowPayment(false)
         setAmount('')
         setReference('')
@@ -115,9 +122,9 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
       <Card>
         <CardHeader className="flex flex-row items-start justify-between">
           <div>
-            <p className="text-sm text-slate-500 mb-1">Invoice for</p>
+            <p className="text-sm text-slate-500 mb-1">Facture de</p>
             <CardTitle className="text-xl">{invoice.studentName}</CardTitle>
-            <p className="text-sm text-slate-500 mt-1">Student ID: {invoice.studentId}</p>
+            <p className="text-sm text-slate-500 mt-1">Matricule : {invoice.studentId}</p>
           </div>
           <div className="text-right">
             <span
@@ -125,32 +132,32 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
                 STATUS_STYLES[invoice.status] ?? 'bg-slate-100 text-slate-500'
               }`}
             >
-              {invoice.status}
+              {STATUS_LABELS[invoice.status] ?? invoice.status}
             </span>
             <p className="text-xs text-slate-500 mt-2">
-              Issued: {format(new Date(invoice.issueDate), 'dd MMM yyyy')}
+              Émise le : {format(new Date(invoice.issueDate), 'dd MMM yyyy')}
             </p>
             <p className="text-xs text-slate-500">
-              Due: {format(new Date(invoice.dueDate), 'dd MMM yyyy')}
+              Échéance : {format(new Date(invoice.dueDate), 'dd MMM yyyy')}
             </p>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg text-center">
             <div>
-              <p className="text-xs text-slate-500 mb-1">Total</p>
+              <p className="text-xs text-slate-500 mb-1">Montant total</p>
               <p className="font-bold text-slate-900">
                 {fmtCurrency(invoice.totalAmount, currencySymbol)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-slate-500 mb-1">Paid</p>
+              <p className="text-xs text-slate-500 mb-1">Déjà payé</p>
               <p className="font-bold text-green-700">
                 {fmtCurrency(invoice.paidAmount ?? 0, currencySymbol)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-slate-500 mb-1">Balance</p>
+              <p className="text-xs text-slate-500 mb-1">Solde restant</p>
               <p className={`font-bold ${balance > 0 ? 'text-red-600' : 'text-slate-900'}`}>
                 {fmtCurrency(balance, currencySymbol)}
               </p>
@@ -165,14 +172,14 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
       {/* Line Items */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Line Items</CardTitle>
+          <CardTitle className="text-base">Détail de la facture</CardTitle>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="text-left px-4 py-3 font-medium text-slate-600">Description</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-600">Amount</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-600">Montant</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -198,26 +205,26 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
       {/* Payment History */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Payment History</CardTitle>
+          <CardTitle className="text-base">Historique des paiements</CardTitle>
           {invoice.status !== 'paid' && invoice.status !== 'waived' && (
             <Button size="sm" onClick={() => setShowPayment(true)}>
-              Record Payment
+              Enregistrer un paiement
             </Button>
           )}
         </CardHeader>
         <CardContent>
           {invoice.payments.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-4">
-              No payments recorded yet.
+              Aucun paiement enregistré pour le moment.
             </p>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className="text-left py-2 font-medium text-slate-600">Date</th>
-                  <th className="text-left py-2 font-medium text-slate-600">Method</th>
-                  <th className="text-left py-2 font-medium text-slate-600">Reference</th>
-                  <th className="text-right py-2 font-medium text-slate-600">Amount</th>
+                  <th className="text-left py-2 font-medium text-slate-600">Mode</th>
+                  <th className="text-left py-2 font-medium text-slate-600">Référence</th>
+                  <th className="text-right py-2 font-medium text-slate-600">Montant</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -226,7 +233,7 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
                     <td className="py-2.5 text-slate-600">
                       {format(new Date(p.paidAt), 'dd MMM yyyy')}
                     </td>
-                    <td className="py-2.5 text-slate-600 capitalize">{p.method}</td>
+                    <td className="py-2.5 text-slate-600">{METHOD_LABELS[p.method] ?? p.method}</td>
                     <td className="py-2.5 text-slate-500">{p.reference ?? '—'}</td>
                     <td className="py-2.5 text-right text-green-700 font-medium">
                       {fmtCurrency(p.amount, currencySymbol)}
@@ -243,7 +250,7 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
       <Dialog open={showPayment} onOpenChange={setShowPayment}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
+            <DialogTitle>Enregistrer un paiement</DialogTitle>
           </DialogHeader>
           <form onSubmit={handlePayment} className="space-y-4 mt-2">
             {error && (
@@ -252,7 +259,7 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
               </div>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="payAmount">Amount ({currencySymbol}) *</Label>
+              <Label htmlFor="payAmount">Montant ({currencySymbol}) *</Label>
               <Input
                 id="payAmount"
                 type="number"
@@ -260,36 +267,36 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
                 min="0.01"
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
-                placeholder={`Balance: ${fmtCurrency(balance, currencySymbol)}`}
+                placeholder={`Solde : ${fmtCurrency(balance, currencySymbol)}`}
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Payment Method *</Label>
+              <Label>Mode de paiement *</Label>
               <Select value={method} onValueChange={(v) => { if (v !== null) setMethod(v) }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="cheque">Cheque</SelectItem>
-                  <SelectItem value="online">Online</SelectItem>
+                  <SelectItem value="cash">Espèces</SelectItem>
+                  <SelectItem value="bank_transfer">Virement bancaire</SelectItem>
+                  <SelectItem value="card">Carte</SelectItem>
+                  <SelectItem value="cheque">Chèque</SelectItem>
+                  <SelectItem value="online">En ligne</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="payRef">Reference (optional)</Label>
+              <Label htmlFor="payRef">Référence (facultatif)</Label>
               <Input
                 id="payRef"
                 value={reference}
                 onChange={e => setReference(e.target.value)}
-                placeholder="Transaction reference, receipt no..."
+                placeholder="Référence de transaction, numéro de reçu…"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="payNotes">Notes (optional)</Label>
+              <Label htmlFor="payNotes">Notes (facultatif)</Label>
               <Textarea
                 id="payNotes"
                 value={notes}
@@ -299,10 +306,10 @@ export default function InvoiceDetailClient({ invoice, currencySymbol }: Props) 
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowPayment(false)}>
-                Cancel
+                Annuler
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? 'Saving...' : 'Record Payment'}
+                {isPending ? 'Enregistrement…' : 'Enregistrer le paiement'}
               </Button>
             </DialogFooter>
           </form>

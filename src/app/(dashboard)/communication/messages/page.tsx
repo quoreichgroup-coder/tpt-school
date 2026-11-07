@@ -1,4 +1,4 @@
-import { requireSession } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -7,7 +7,7 @@ import { Mail, Plus } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 export default async function MessagesPage() {
-  const user = await requireSession()
+  const user = await requireRole(['admin', 'teacher', 'parent', 'student'])
 
   const messages = await db.messageRecipient.findMany({
     where: { userId: user.id },

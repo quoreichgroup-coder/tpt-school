@@ -1,4 +1,4 @@
-import { requireSession } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
@@ -6,7 +6,7 @@ import { ChevronLeft, Mail } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 export default async function PortalMessagesPage() {
-  const user = await requireSession()
+  const user = await requireRole(['admin', 'teacher', 'parent', 'student'])
 
   // Threads where user is a recipient (received)
   const received = await db.messageRecipient.findMany({

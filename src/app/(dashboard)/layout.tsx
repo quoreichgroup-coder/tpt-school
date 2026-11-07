@@ -38,7 +38,7 @@ export default async function DashboardLayout({
 
         {/* Sidebar footer */}
         <div className="border-t border-slate-200 px-4 py-3 flex-shrink-0">
-          <p className="text-xs text-slate-400">&copy; {new Date().getFullYear()} TPT School</p>
+          <p className="text-xs text-slate-400">&copy; {new Date().getFullYear()} QSCHOOL</p>
         </div>
       </aside>
 

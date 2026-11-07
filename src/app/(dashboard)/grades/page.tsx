@@ -74,6 +74,7 @@ export default async function GradesPage() {
               <TableHead>Type</TableHead>
               <TableHead>Due Date</TableHead>
               <TableHead className="text-center">Max Score</TableHead>
+              <TableHead className="text-center">Coefficient</TableHead>
               <TableHead className="text-center">Grades</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -81,7 +82,7 @@ export default async function GradesPage() {
           <TableBody>
             {gradebooks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-12 text-slate-400">
+                <TableCell colSpan={9} className="text-center py-12 text-slate-400">
                   <Award className="w-8 h-8 mx-auto mb-2 opacity-40" />
                   <p>No assessments found</p>
                 </TableCell>
@@ -105,6 +106,7 @@ export default async function GradesPage() {
                     {gb.dueDate ? format(new Date(gb.dueDate), 'dd MMM yyyy') : '—'}
                   </TableCell>
                   <TableCell className="text-center font-medium">{gb.maxScore}</TableCell>
+                  <TableCell className="text-center text-slate-600">{gb.weight}</TableCell>
                   <TableCell className="text-center text-slate-600">{gb._count.grades}</TableCell>
                   <TableCell className="text-right">
                     <Link href={`/grades/${gb.id}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>Enter Grades</Link>

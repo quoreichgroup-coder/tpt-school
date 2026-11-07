@@ -6,21 +6,29 @@ import { updateStaffAllowRepliesAction } from './actions'
 export default function AllowRepliesToggle({ staffId, value }: { staffId: string; value: boolean }) {
   const [enabled, setEnabled] = useState(value)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function toggle() {
     setSaving(true)
     const next = !enabled
+    setError(null)
     setEnabled(next)
-    await updateStaffAllowRepliesAction(staffId, next)
-    setSaving(false)
+    try {
+      await updateStaffAllowRepliesAction(staffId, next)
+    } catch {
+      setEnabled(!next)
+      setError('Impossible d’enregistrer ce paramètre. Réessayez.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-sm font-medium text-slate-700">Allow parent/student replies</p>
+        <p className="text-sm font-medium text-slate-700">Autoriser les réponses des parents et des élèves</p>
         <p className="text-xs text-slate-400 mt-0.5">
-          When enabled, parents and students can reply to messages from this staff member.
+          Une fois activés, les parents et les élèves peuvent répondre aux messages de ce membre du personnel.
         </p>
       </div>
       <button
@@ -39,6 +47,7 @@ export default function AllowRepliesToggle({ staffId, value }: { staffId: string
           }`}
         />
       </button>
+      {error && <p role="alert" className="ml-3 text-xs text-destructive">{error}</p>}
     </div>
   )
 }

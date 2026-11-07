@@ -24,6 +24,19 @@ type Props = {
   initialComments: string
   initialTeacherNotes: string
   initialPrincipalNotes: string
+  isAdmin: boolean
+  approvalStatus: string
+  reviewedBy: string | null
+  rejectionReason: string | null
+  revisions: Array<{
+    id: string
+    action: string
+    actorName: string
+    createdAt: string
+    approvalStatus: string
+    comments: string | null
+    rejectionReason: string | null
+  }>
   aiEnabled: boolean
 }
 
@@ -35,6 +48,11 @@ export default function ReportCardEditor({
   initialComments,
   initialTeacherNotes,
   initialPrincipalNotes,
+  isAdmin,
+  approvalStatus,
+  reviewedBy,
+  rejectionReason,
+  revisions,
   aiEnabled,
 }: Props) {
   const router = useRouter()
@@ -81,24 +99,29 @@ export default function ReportCardEditor({
         teacherNotes: teacherNotes || undefined,
         principalNotes: principalNotes || undefined,
       })
-      if (result.success) setSuccess('Report card saved.')
+      if (result.success) {
+        setSuccess('Report card saved.')
+        router.refresh()
+      }
       else setError(result.error ?? 'Save failed.')
     })
   }
 
-  const AiButton = ({ field }: { field: 'comments' | 'teacherNotes' }) => (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      onClick={() => handleGenerate(field)}
-      disabled={isGenerating || !termId}
-      className="gap-1.5 text-violet-600 border-violet-200 hover:bg-violet-50 hover:border-violet-300"
-    >
-      {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-      Generate with AI
-    </Button>
-  )
+  function renderAiButton(field: 'comments' | 'teacherNotes') {
+    return (
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => handleGenerate(field)}
+        disabled={isGenerating || !termId}
+        className="gap-1.5 text-violet-600 border-violet-200 hover:bg-violet-50 hover:border-violet-300"
+      >
+        {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+        Generate with AI
+      </Button>
+    )
+  }
 
   return (
     <Card>
@@ -106,6 +129,12 @@ export default function ReportCardEditor({
         <CardTitle className="text-base">Report Card — {studentName}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <span className="font-semibold">Status: {approvalStatus.replaceAll('_', ' ')}</span>
+          {reviewedBy && <span> · Reviewed by {reviewedBy}</span>}
+          {approvalStatus === 'rejected' && rejectionReason && <p className="mt-1 text-amber-800">Return reason: {rejectionReason}</p>}
+          {approvalStatus === 'approved' && <p className="mt-1">Saving edits will unpublish this bulletin until it is reviewed again.</p>}
+        </div>
         {error && (
           <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
         )}
@@ -130,7 +159,7 @@ export default function ReportCardEditor({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="comments">General Comments</Label>
-            {aiEnabled && <AiButton field="comments" />}
+            {aiEnabled && renderAiButton('comments')}
           </div>
           <Textarea
             id="comments"
@@ -144,7 +173,7 @@ export default function ReportCardEditor({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="teacherNotes">Teacher Notes</Label>
-            {aiEnabled && <AiButton field="teacherNotes" />}
+            {aiEnabled && renderAiButton('teacherNotes')}
           </div>
           <Textarea
             id="teacherNotes"
@@ -155,7 +184,7 @@ export default function ReportCardEditor({
           />
         </div>
 
-        <div className="space-y-1.5">
+        {isAdmin && <div className="space-y-1.5">
           <Label htmlFor="principalNotes">Principal Notes</Label>
           <Textarea
             id="principalNotes"
@@ -164,7 +193,7 @@ export default function ReportCardEditor({
             value={principalNotes}
             onChange={e => setPrincipalNotes(e.target.value)}
           />
-        </div>
+        </div>}
 
         <div className="flex gap-3 pt-2">
           <Button onClick={handleSave} disabled={isSaving}>
@@ -184,8 +213,24 @@ export default function ReportCardEditor({
 
         {aiEnabled && (
           <p className="text-xs text-slate-400">
-            "Generate with AI" uses the configured AI provider to draft a comment based on grades, attendance, and behaviour data for the selected term. You can edit before saving.
+            &quot;Generate with AI&quot; uses the configured AI provider to draft a comment based on grades, attendance, and behaviour data for the selected term. You can edit before saving.
           </p>
+        )}
+
+        {revisions.length > 0 && (
+          <section className="border-t border-slate-200 pt-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-800">Approval and edit history</h3>
+            <ol className="space-y-2">
+              {revisions.map(revision => (
+                <li key={revision.id} className="rounded-md border border-slate-100 px-3 py-2 text-xs text-slate-600">
+                  <p className="font-medium text-slate-800">{revision.action.replaceAll('_', ' ')} · {revision.actorName}</p>
+                  <time dateTime={revision.createdAt}>{new Date(revision.createdAt).toLocaleString()}</time>
+                  {revision.comments && <p className="mt-1 whitespace-pre-wrap">{revision.comments}</p>}
+                  {revision.rejectionReason && <p className="mt-1 text-amber-800">Reason: {revision.rejectionReason}</p>}
+                </li>
+              ))}
+            </ol>
+          </section>
         )}
       </CardContent>
     </Card>

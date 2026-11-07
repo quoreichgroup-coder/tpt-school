@@ -16,11 +16,11 @@ export default function FeeReminderButton() {
     if (res.success) {
       setResult(
         res.sent === 0
-          ? 'No reminders needed — all recent invoices were already reminded within 7 days.'
-          : `Sent ${res.sent} reminder${res.sent !== 1 ? 's' : ''}${res.skipped ? `, skipped ${res.skipped}` : ''}.`,
+          ? 'Aucun rappel à envoyer : les factures récentes ont déjà fait l’objet d’un rappel au cours des 7 derniers jours.'
+          : `${res.sent} rappel${res.sent !== 1 ? 's' : ''} envoyé${res.sent !== 1 ? 's' : ''}${res.skipped ? `, ${res.skipped} ignoré${res.skipped !== 1 ? 's' : ''}` : ''}.`,
       )
     } else {
-      setResult(res.error ?? 'Failed to send reminders.')
+      setResult(res.error ?? 'Échec de l’envoi des rappels.')
     }
     setLoading(false)
   }
@@ -29,7 +29,7 @@ export default function FeeReminderButton() {
     <div className="flex flex-col items-end gap-1">
       <Button variant="outline" onClick={handleClick} disabled={loading}>
         <Bell className="w-4 h-4 mr-2" />
-        {loading ? 'Sending…' : 'Send Overdue Reminders'}
+        {loading ? 'Envoi…' : 'Envoyer les rappels de paiement'}
       </Button>
       {result && (
         <p className="text-xs text-slate-500 max-w-xs text-right">{result}</p>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 export async function GET(
   request: NextRequest,
@@ -40,18 +40,9 @@ export async function GET(
     if (!isTeacher) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const wb = XLSX.utils.book_new()
+  const wb = new ExcelJS.Workbook()
 
   // Sheet 1: Summary — rows = students, columns = assessments
-  const headerRow: Record<string, string | number> = {
-    'Student Name': '',
-    'Student ID': '',
-  }
-  for (const gb of cls.gradebooks) {
-    headerRow[`${gb.name} (${gb.term.name})`] = ''
-    headerRow[`${gb.name} %`] = ''
-  }
-
   const summaryRows = cls.enrolments.map((e) => {
     const row: Record<string, string | number> = {
       'Student Name': e.student.user.name,
@@ -67,9 +58,17 @@ export async function GET(
     return row
   })
 
-  const wsSummary = XLSX.utils.json_to_sheet(summaryRows)
-  wsSummary['!cols'] = [{ wch: 25 }, { wch: 12 }, ...cls.gradebooks.flatMap(() => [{ wch: 16 }, { wch: 8 }])]
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary')
+  const wsSummary = wb.addWorksheet('Summary')
+  wsSummary.columns = [
+    { header: 'Student Name', key: 'Student Name', width: 25 },
+    { header: 'Student ID', key: 'Student ID', width: 12 },
+    ...cls.gradebooks.flatMap((gb) => [
+      { header: `${gb.name} (${gb.term.name})`, key: `${gb.name} (${gb.term.name})`, width: 16 },
+      { header: `${gb.name} %`, key: `${gb.name} %`, width: 8 },
+    ]),
+  ]
+  wsSummary.addRows(summaryRows)
+  wsSummary.getRow(1).font = { bold: true }
 
   // Sheet per gradebook
   for (const gb of cls.gradebooks) {
@@ -87,13 +86,23 @@ export async function GET(
         'Submitted': g?.submittedAt ? new Date(g.submittedAt).toLocaleDateString('en-NZ') : '',
       }
     })
-    const ws = XLSX.utils.json_to_sheet(rows)
-    ws['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 30 }, { wch: 14 }]
     const sheetName = gb.name.slice(0, 31).replace(/[:\\/?\[\]*]/g, '') // Excel 31 char sheet name limit
-    XLSX.utils.book_append_sheet(wb, ws, sheetName)
+    const ws = wb.addWorksheet(sheetName || `Gradebook ${gb.id.slice(0, 8)}`)
+    ws.columns = [
+      { header: 'Student Name', key: 'Student Name', width: 25 },
+      { header: 'Student ID', key: 'Student ID', width: 12 },
+      { header: 'Score', key: 'Score', width: 8 },
+      { header: 'Max Score', key: 'Max Score', width: 10 },
+      { header: 'Percentage', key: 'Percentage', width: 12 },
+      { header: 'Grade', key: 'Grade', width: 8 },
+      { header: 'Comment', key: 'Comment', width: 30 },
+      { header: 'Submitted', key: 'Submitted', width: 14 },
+    ]
+    ws.addRows(rows)
+    ws.getRow(1).font = { bold: true }
   }
 
-  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+  const buf = Buffer.from(await wb.xlsx.writeBuffer())
   const safeName = cls.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_')
 
   return new NextResponse(buf, {

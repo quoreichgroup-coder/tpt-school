@@ -4,12 +4,16 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
 const STATUS_COLORS: Record<string, string> = {
   present: 'bg-green-100 text-green-700',
   absent: 'bg-red-100 text-red-700',
   late: 'bg-yellow-100 text-yellow-700',
   excused: 'bg-blue-100 text-blue-700',
+}
+const STATUS_LABELS: Record<string, string> = {
+  present: 'Présent', absent: 'Absent', late: 'En retard', excused: 'Excusé',
 }
 
 interface PageProps {
@@ -39,8 +43,13 @@ export default async function AttendanceReportPage({ searchParams }: PageProps) 
   ])
 
   // Build query
-  const startDate = filters.startDate ? new Date(filters.startDate) : undefined
-  const endDate = filters.endDate ? new Date(filters.endDate) : undefined
+  const parseDateFilter = (value?: string) => {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined
+    const date = new Date(`${value}T00:00:00`)
+    return Number.isNaN(date.getTime()) ? undefined : date
+  }
+  const startDate = parseDateFilter(filters.startDate)
+  const endDate = parseDateFilter(filters.endDate)
   if (endDate) endDate.setHours(23, 59, 59, 999)
 
   let studentIds: string[] | undefined
@@ -54,8 +63,10 @@ export default async function AttendanceReportPage({ searchParams }: PageProps) 
 
   const records = await db.attendance.findMany({
     where: {
-      ...(filters.studentId ? { studentId: filters.studentId } : {}),
-      ...(studentIds ? { studentId: { in: studentIds } } : {}),
+      AND: [
+        ...(filters.studentId ? [{ studentId: filters.studentId }] : []),
+        ...(studentIds ? [{ studentId: { in: studentIds } }] : []),
+      ],
       ...(startDate || endDate
         ? {
             date: {
@@ -109,43 +120,43 @@ export default async function AttendanceReportPage({ searchParams }: PageProps) 
           className="inline-flex items-center text-sm text-slate-500 hover:text-slate-700 mb-4"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Attendance
+          Retour aux présences
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Attendance Report</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Rapport des présences</h1>
       </div>
 
       {/* Filters */}
       <form method="GET" className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-        <h2 className="font-semibold text-slate-800 mb-4">Filters</h2>
+        <h2 className="font-semibold text-slate-800 mb-4">Filtres</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-600">Student</label>
+            <label className="text-sm font-medium text-slate-600">Élève</label>
             <select
               name="studentId"
               defaultValue={filters.studentId ?? ''}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              <option value="">All students</option>
+              <option value="">Tous les élèves</option>
               {students.map((s) => (
                 <option key={s.id} value={s.id}>{s.user.name}</option>
               ))}
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-600">Class</label>
+            <label className="text-sm font-medium text-slate-600">Classe</label>
             <select
               name="classId"
               defaultValue={filters.classId ?? ''}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              <option value="">All classes</option>
+              <option value="">Toutes les classes</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-600">Start Date</label>
+            <label className="text-sm font-medium text-slate-600">Date de début</label>
             <input
               type="date"
               name="startDate"
@@ -154,7 +165,7 @@ export default async function AttendanceReportPage({ searchParams }: PageProps) 
             />
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-600">End Date</label>
+            <label className="text-sm font-medium text-slate-600">Date de fin</label>
             <input
               type="date"
               name="endDate"
@@ -168,13 +179,13 @@ export default async function AttendanceReportPage({ searchParams }: PageProps) 
             type="submit"
             className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
           >
-            Apply Filters
+            Appliquer les filtres
           </button>
           <Link
             href="/attendance/report"
             className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
           >
-            Clear
+            Effacer
           </Link>
         </div>
       </form>
@@ -182,10 +193,10 @@ export default async function AttendanceReportPage({ searchParams }: PageProps) 
       {/* Summary totals */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Present', value: summary.present, color: 'text-green-600' },
-          { label: 'Absent', value: summary.absent, color: 'text-red-600' },
-          { label: 'Late', value: summary.late, color: 'text-yellow-600' },
-          { label: 'Excused', value: summary.excused, color: 'text-blue-600' },
+          { label: 'Présents', value: summary.present, color: 'text-green-600' },
+          { label: 'Absents', value: summary.absent, color: 'text-red-600' },
+          { label: 'En retard', value: summary.late, color: 'text-yellow-600' },
+          { label: 'Excusés', value: summary.excused, color: 'text-blue-600' },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl border border-slate-200 p-4">
             <p className="text-xs text-slate-500 font-medium">{stat.label}</p>
@@ -198,19 +209,19 @@ export default async function AttendanceReportPage({ searchParams }: PageProps) 
       {studentRows.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">Student Summary</h2>
+            <h2 className="font-semibold text-slate-800">Récapitulatif par élève</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="text-left px-6 py-3 font-medium text-slate-600">Student</th>
-                  <th className="text-center px-4 py-3 font-medium text-green-600">Present</th>
+                  <th className="text-left px-6 py-3 font-medium text-slate-600">Élève</th>
+                  <th className="text-center px-4 py-3 font-medium text-green-600">Présent</th>
                   <th className="text-center px-4 py-3 font-medium text-red-600">Absent</th>
-                  <th className="text-center px-4 py-3 font-medium text-yellow-600">Late</th>
-                  <th className="text-center px-4 py-3 font-medium text-blue-600">Excused</th>
+                  <th className="text-center px-4 py-3 font-medium text-yellow-600">En retard</th>
+                  <th className="text-center px-4 py-3 font-medium text-blue-600">Excusé</th>
                   <th className="text-center px-4 py-3 font-medium text-slate-600">Total</th>
-                  <th className="text-center px-4 py-3 font-medium text-slate-600">Rate</th>
+                  <th className="text-center px-4 py-3 font-medium text-slate-600">Taux</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -242,22 +253,22 @@ export default async function AttendanceReportPage({ searchParams }: PageProps) 
       {/* Detailed records */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Detailed Records</h2>
-          <span className="text-sm text-slate-500">{records.length} records</span>
+          <h2 className="font-semibold text-slate-800">Détail des saisies</h2>
+          <span className="text-sm text-slate-500">{records.length} enregistrement(s)</span>
         </div>
         {records.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
-            <p>No attendance records found for the selected filters</p>
+            <p>Aucune présence ne correspond aux filtres choisis.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="text-left px-6 py-3 font-medium text-slate-600">Student</th>
+                  <th className="text-left px-6 py-3 font-medium text-slate-600">Élève</th>
                   <th className="text-left px-4 py-3 font-medium text-slate-600">Date</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Term</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600">Trimestre</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600">Statut</th>
                   <th className="text-left px-4 py-3 font-medium text-slate-600">Notes</th>
                 </tr>
               </thead>
@@ -268,12 +279,12 @@ export default async function AttendanceReportPage({ searchParams }: PageProps) 
                       {rec.student.user.name}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {format(new Date(rec.date), 'dd MMM yyyy')}
+                        {format(new Date(rec.date), 'dd MMM yyyy', { locale: fr })}
                     </td>
                     <td className="px-4 py-3 text-slate-500">{rec.term.name}</td>
                     <td className="px-4 py-3">
                       <Badge className={STATUS_COLORS[rec.status] + ' border-0 capitalize'}>
-                        {rec.status}
+                        {STATUS_LABELS[rec.status] ?? rec.status}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-slate-500">{rec.notes ?? '—'}</td>

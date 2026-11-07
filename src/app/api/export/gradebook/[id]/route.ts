@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 export async function GET(
   request: NextRequest,
@@ -61,17 +61,24 @@ export async function GET(
     }
   })
 
-  const ws = XLSX.utils.json_to_sheet(rows)
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Grades')
-
-  // Set column widths
-  ws['!cols'] = [
-    { wch: 25 }, { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 12 },
-    { wch: 8 }, { wch: 30 }, { wch: 14 }, { wch: 40 }, { wch: 14 },
+  const workbook = new ExcelJS.Workbook()
+  const worksheet = workbook.addWorksheet('Grades')
+  const columns = [
+    { header: 'Student Name', key: 'Student Name', width: 25 },
+    { header: 'Student ID', key: 'Student ID', width: 12 },
+    { header: 'Score', key: 'Score', width: 8 },
+    { header: 'Max Score', key: 'Max Score', width: 10 },
+    { header: 'Percentage', key: 'Percentage', width: 12 },
+    { header: 'Grade', key: 'Grade', width: 8 },
+    { header: 'Comment', key: 'Comment', width: 30 },
+    { header: 'Submitted At', key: 'Submitted At', width: 14 },
+    { header: 'Submission URL', key: 'Submission URL', width: 40 },
+    { header: 'Graded At', key: 'Graded At', width: 14 },
   ]
-
-  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+  worksheet.columns = columns
+  worksheet.addRows(rows)
+  worksheet.getRow(1).font = { bold: true }
+  const buf = Buffer.from(await workbook.xlsx.writeBuffer())
   const safeName = `${gradebook.class.name}_${gradebook.name}`.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_')
 
   return new NextResponse(buf, {

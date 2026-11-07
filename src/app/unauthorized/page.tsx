@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ShieldX } from 'lucide-react'
 
-export const metadata = { title: 'Access Denied — TPT School' }
+export const metadata = { title: 'Accès refusé — QSCHOOL' }
 
 export default function UnauthorizedPage() {
   return (
@@ -11,10 +11,10 @@ export default function UnauthorizedPage() {
           <ShieldX className="w-10 h-10" />
         </div>
 
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Access Denied</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Accès refusé</h1>
         <p className="text-slate-500 mb-8">
-          You don&apos;t have permission to view this page. Please contact your school
-          administrator if you believe this is a mistake.
+          Vous n’avez pas l’autorisation d’accéder à cette page. Contactez l’administration
+          de votre établissement si vous pensez qu’il s’agit d’une erreur.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -22,13 +22,13 @@ export default function UnauthorizedPage() {
             href="/dashboard"
             className="inline-flex items-center justify-center h-8 px-4 rounded-lg border border-border bg-background text-sm font-medium hover:bg-muted transition-colors"
           >
-            Go to Dashboard
+            Retour au tableau de bord
           </Link>
           <Link
             href="/login"
             className="inline-flex items-center justify-center h-8 px-4 rounded-lg text-sm font-medium text-slate-500 hover:bg-muted hover:text-slate-900 transition-colors"
           >
-            Sign in with a different account
+            Se connecter avec un autre compte
           </Link>
         </div>
       </div>

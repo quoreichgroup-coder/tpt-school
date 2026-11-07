@@ -1,7 +1,7 @@
 {
   "name": "tpt-school-desktop",
   "version": "0.1.0",
-  "description": "TPT School — Desktop Installer",
+  "description": "QSCHOOL — Desktop Installer",
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -21,8 +21,8 @@
   },
   "build": {
     "appId": "nz.school.tpt",
-    "productName": "TPT School",
-    "copyright": "Copyright © 2026 TPT School",
+    "productName": "QSCHOOL",
+    "copyright": "Copyright © 2026 QSCHOOL",
     "directories": {
       "output": "dist",
       "buildResources": "build-resources"

@@ -6,17 +6,69 @@ import { createElement } from 'react'
 
 export const dynamic = 'force-dynamic'
 import { ReportCardDocument } from './pdf-document'
+import { weightedAveragePercent } from '@/lib/grade-calculation'
 
 type RouteContext = { params: Promise<{ studentId: string }> }
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const session = await getSession()
-  if (!session || !['admin', 'teacher'].includes(session.role)) {
+  if (!session) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
   const { studentId } = await params
-  const termId = req.nextUrl.searchParams.get('termId') ?? undefined
+  let termId = req.nextUrl.searchParams.get('termId') ?? undefined
+  const isStaff = ['admin', 'teacher'].includes(session.role)
+  const isFamily = ['student', 'parent'].includes(session.role)
+  if (!isStaff && !isFamily) return new NextResponse('Forbidden', { status: 403 })
+
+  if (session.role === 'teacher') {
+    if (!termId) return new NextResponse('A term is required for teacher access.', { status: 400 })
+    const term = await db.term.findUnique({ where: { id: termId }, select: { academicYearId: true } })
+    const assignment = term && await db.classEnrolment.findFirst({
+      where: {
+        studentId,
+        status: 'active',
+        class: {
+          academicYearId: term.academicYearId,
+          teachers: { some: { staff: { userId: session.id } } },
+        },
+      },
+      select: { id: true },
+    })
+    if (!assignment) return new NextResponse('Student not found', { status: 404 })
+  }
+
+  if (isFamily) {
+    const allowedStudent = await db.student.findFirst({
+      where: session.role === 'student'
+        ? { id: studentId, userId: session.id }
+        : { id: studentId, parents: { some: { parent: { userId: session.id } } } },
+      select: { id: true },
+    })
+    if (!allowedStudent) return new NextResponse('Student not found', { status: 404 })
+  }
+
+  const reportCard = isFamily
+    ? await db.reportCard.findFirst({
+      where: {
+        studentId,
+        published: true,
+        approvalStatus: 'approved',
+        ...(termId ? { termId } : {}),
+      },
+      orderBy: { issuedAt: 'desc' },
+    })
+    : termId
+      ? await db.reportCard.findUnique({ where: { studentId_termId: { studentId, termId } } })
+      : null
+
+  if (isFamily && !reportCard) return new NextResponse('Published report card not found', { status: 404 })
+  if (reportCard) termId = reportCard.termId
+
+  const reportTerm = reportCard
+    ? await db.term.findUnique({ where: { id: reportCard.termId }, include: { academicYear: true } })
+    : null
 
   const [student, school] = await Promise.all([
     db.student.findUnique({
@@ -24,7 +76,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       include: {
         user: true,
         classEnrolments: {
-          where: { status: 'active' },
+          where: termId ? {
+            OR: [
+              { status: 'active' },
+              { class: { gradebooks: { some: { termId, grades: { some: { studentId } } } } } },
+            ],
+          } : { status: 'active' },
           include: {
             class: {
               include: {
@@ -82,8 +139,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
         comment: grade?.comment ?? null,
       }
     })
-    const scores = gradebooks.map(g => g.score).filter((s): s is number => s !== null)
-    const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10) / 10 : null
+    const average = weightedAveragePercent(cls.gradebooks.map(gradebook => ({
+      score: gradebook.grades[0]?.score ?? null,
+      maxScore: gradebook.maxScore,
+      weight: gradebook.weight,
+    })))
+    const avg = average === null ? null : Math.round(average * 10) / 10
     return {
       className: cls.name,
       classCode: cls.code,
@@ -95,6 +156,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   })
 
   const docElement = createElement(ReportCardDocument, {
+    period: reportTerm ? `${reportTerm.academicYear.year} — ${reportTerm.name}` : undefined,
+    comments: reportCard?.comments,
     student: {
       name: student.user.name,
       studentId: student.studentId,
@@ -102,7 +165,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       email: student.user.email,
     },
     school: {
-      name: school?.name ?? 'TPT School',
+      name: school?.name ?? 'QSCHOOL',
       shortName: school?.shortName ?? undefined,
       address: school?.address ?? undefined,
       phone: school?.phone ?? undefined,
@@ -112,7 +175,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     generatedAt: new Date().toLocaleDateString('en-NZ', { day: 'numeric', month: 'long', year: 'numeric' }),
   })
 
-  const buffer = await renderToBuffer(docElement as any)
+  const buffer = await renderToBuffer(docElement as unknown as Parameters<typeof renderToBuffer>[0])
 
   const safeName = student.user.name.replace(/[^a-z0-9]/gi, '_')
   return new NextResponse(new Uint8Array(buffer), {

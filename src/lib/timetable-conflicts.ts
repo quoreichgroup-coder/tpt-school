@@ -1,4 +1,4 @@
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+const DAY_NAMES = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
 
 export type ConflictType = 'teacher-clash' | 'room-clash'
 
@@ -35,14 +35,14 @@ export function detectConflicts(slots: ConflictSlot[]): TimetableConflict[] {
   }
   for (const group of teacherMap.values()) {
     if (group.length < 2) continue
-    const teacherName = group[0].staff?.user.name ?? 'Unknown teacher'
-    const dayName = DAY_NAMES[group[0].dayOfWeek - 1] ?? `Day ${group[0].dayOfWeek}`
+    const teacherName = group[0].staff?.user.name ?? 'Enseignant inconnu'
+    const dayName = DAY_NAMES[group[0].dayOfWeek - 1] ?? `Jour ${group[0].dayOfWeek}`
     conflicts.push({
       type: 'teacher-clash',
       day: group[0].dayOfWeek,
       period: group[0].period,
       slotIds: group.map(s => s.id),
-      description: `${teacherName} is double-booked on ${dayName} P${group[0].period} (${group.map(s => s.class.name).join(' & ')})`,
+      description: `${teacherName} a deux cours prévus le ${dayName} au créneau P${group[0].period} (${group.map(s => s.class.name).join(' et ')})`,
     })
   }
 
@@ -57,14 +57,14 @@ export function detectConflicts(slots: ConflictSlot[]): TimetableConflict[] {
   }
   for (const group of roomMap.values()) {
     if (group.length < 2) continue
-    const roomCode = group[0].room?.code ?? 'Unknown room'
-    const dayName = DAY_NAMES[group[0].dayOfWeek - 1] ?? `Day ${group[0].dayOfWeek}`
+    const roomCode = group[0].room?.code ?? 'Salle inconnue'
+    const dayName = DAY_NAMES[group[0].dayOfWeek - 1] ?? `Jour ${group[0].dayOfWeek}`
     conflicts.push({
       type: 'room-clash',
       day: group[0].dayOfWeek,
       period: group[0].period,
       slotIds: group.map(s => s.id),
-      description: `Room ${roomCode} is double-booked on ${dayName} P${group[0].period} (${group.map(s => s.class.name).join(' & ')})`,
+      description: `La salle ${roomCode} est réservée deux fois le ${dayName} au créneau P${group[0].period} (${group.map(s => s.class.name).join(' et ')})`,
     })
   }
 

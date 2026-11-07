@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "QSCHOOL",
+    "slug": "qschool",
+    "scheme": "qschool",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.qschool.mobile",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0062DB",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "app.qschool.mobile"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "expo-build-properties"
+    ],
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "experiments": {
+      "autolinkingModuleResolution": true
+    },
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "2051fe20-a78d-463c-8253-6cd93e7e2977"
+      }
+    },
+    "owner": "qrch"
+  }
+}

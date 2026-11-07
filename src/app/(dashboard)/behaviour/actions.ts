@@ -1,16 +1,31 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { requireRole, requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendEmail, truancyEmailHtml, behaviourEmailHtml } from "@/lib/email";
+
+async function teacherCanAccessStudent(userId: string, studentId: string): Promise<boolean> {
+  const enrolment = await db.classEnrolment.findFirst({
+    where: {
+      studentId,
+      status: 'active',
+      class: { teachers: { some: { staff: { userId } } } },
+    },
+    select: { id: true },
+  })
+  return !!enrolment
+}
 
 export async function createIncidentAction(formData: FormData) {
   const session = await requireRole(["admin", "teacher"]);
 
   const studentId = formData.get("studentId") as string;
-  const date = new Date(formData.get("date") as string);
+  const dateValue = formData.get("date");
+  const date = typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+    ? new Date(`${dateValue}T00:00:00.000Z`)
+    : new Date(Number.NaN);
   const description = formData.get("description") as string;
   const location = formData.get("location") as string | null;
   const severity = (formData.get("severity") as string) || "minor";
@@ -18,6 +33,15 @@ export async function createIncidentAction(formData: FormData) {
   const actionTaken = formData.get("actionTaken") as string | null;
   const parentNotified = formData.get("parentNotified") === "on";
   const followUpRequired = formData.get("followUpRequired") === "on";
+
+  if (!studentId || !description?.trim() || description.length > 5000 || Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== dateValue ||
+    !["minor", "moderate", "major", "critical"].includes(severity)) {
+    return { success: false, error: "Student, date, description, and a valid severity are required." }
+  }
+  if (session.role === 'teacher' && !await teacherCanAccessStudent(session.id, studentId)) {
+    return { success: false, error: "You are not assigned to this student." }
+  }
 
   try {
     const incident = await db.behaviourIncident.create({
@@ -71,15 +95,26 @@ export async function createIncidentAction(formData: FormData) {
 }
 
 export async function updateIncidentAction(id: string, formData: FormData) {
-  await requireRole(["admin", "teacher"]);
+  const actor = await requireRole(["admin", "teacher"]);
+  const existing = await db.behaviourIncident.findUnique({ where: { id }, select: { studentId: true, reportedById: true } })
+  if (!existing) return { success: false, error: "Incident not found." }
+  if (actor.role === 'teacher' && (existing.reportedById !== actor.id || !await teacherCanAccessStudent(actor.id, existing.studentId))) {
+    return { success: false, error: "You can only update your own incidents for assigned students." }
+  }
+
+  const severity = String(formData.get("severity") ?? '')
+  const description = String(formData.get("description") ?? '').trim()
+  if (!description || description.length > 5000 || !["minor", "moderate", "major", "critical"].includes(severity)) {
+    return { success: false, error: "Enter a description and valid severity." }
+  }
 
   try {
     const incident = await db.behaviourIncident.update({
       where: { id },
       data: {
-        description: formData.get("description") as string,
+        description,
         location: (formData.get("location") as string) || null,
-        severity: formData.get("severity") as string,
+        severity,
         witnesses: (formData.get("witnesses") as string) || null,
         actionTaken: (formData.get("actionTaken") as string) || null,
         parentNotified: formData.get("parentNotified") === "on",
@@ -181,6 +216,25 @@ export async function exitStudentAction(formData: FormData) {
 }
 
 export async function checkTruancyAction(studentId: string, termId: string) {
+  const actor = await requireRole(['admin', 'teacher'])
+  const term = await db.term.findUnique({ where: { id: termId }, select: { academicYearId: true } })
+  if (!term) return
+
+  if (actor.role === 'teacher') {
+    const enrolledInAssignedClass = await db.classEnrolment.findFirst({
+      where: {
+        studentId,
+        status: 'active',
+        class: {
+          academicYearId: term.academicYearId,
+          teachers: { some: { staff: { userId: actor.id } } },
+        },
+      },
+      select: { id: true },
+    })
+    if (!enrolledInAssignedClass) return
+  }
+
   const recentAttendance = await db.attendance.findMany({
     where: { studentId, termId },
     orderBy: { date: "desc" },
@@ -236,10 +290,16 @@ export async function checkTruancyAction(studentId: string, termId: string) {
 }
 
 export async function resolveTruancyAlertAction(alertId: string, notes: string) {
-  const session = await requireSession();
+  const session = await requireRole(['admin', 'teacher']);
+  const alert = await db.truancyAlert.findUnique({ where: { id: alertId }, select: { studentId: true, resolvedAt: true } })
+  if (!alert) return { success: false, error: 'Alert not found.' }
+  if (alert.resolvedAt) return { success: false, error: 'Alert is already resolved.' }
+  if (session.role === 'teacher' && !await teacherCanAccessStudent(session.id, alert.studentId)) {
+    return { success: false, error: 'You are not assigned to this student.' }
+  }
   await db.truancyAlert.update({
     where: { id: alertId },
-    data: { resolvedAt: new Date(), resolvedBy: session.id, notes },
+    data: { resolvedAt: new Date(), resolvedBy: session.id, notes: notes.trim().slice(0, 1000) || null },
   });
   revalidatePath("/behaviour");
   return { success: true };

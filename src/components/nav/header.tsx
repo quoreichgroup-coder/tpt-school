@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -37,10 +38,11 @@ function getInitials(name: string) {
 
 function getRoleLabel(role: string) {
   const labels: Record<string, string> = {
-    admin: 'Administrator',
-    teacher: 'Teacher',
+    admin: 'Administrateur',
+    accountant: 'Comptable',
+    teacher: 'Enseignant',
     parent: 'Parent',
-    student: 'Student',
+    student: 'Élève',
   }
   return labels[role] ?? role
 }
@@ -57,7 +59,7 @@ export default function DashboardHeader({ schoolName, user }: HeaderProps) {
           size="icon"
           className="lg:hidden flex-shrink-0"
           onClick={() => setMobileOpen(true)}
-          aria-label="Open menu"
+          aria-label="Ouvrir le menu"
         >
           <Menu className="w-5 h-5" />
         </Button>
@@ -91,12 +93,14 @@ export default function DashboardHeader({ schoolName, user }: HeaderProps) {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div>
-                <p className="font-medium">{user.name}</p>
-                <p className="text-xs text-slate-500 font-normal mt-0.5">{user.email}</p>
-              </div>
-            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>
+                <div>
+                  <p className="font-medium">{user.name}</p>
+                  <p className="text-xs text-slate-500 font-normal mt-0.5">{user.email}</p>
+                </div>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
@@ -104,7 +108,7 @@ export default function DashboardHeader({ schoolName, user }: HeaderProps) {
               className="cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
-              Sign out
+              Déconnexion
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

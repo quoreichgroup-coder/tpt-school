@@ -19,23 +19,25 @@ export default async function TimetablePage() {
   const activeYear = await db.academicYear.findFirst({ where: { active: true } })
 
   // Load timetable slots
-  const slots = await db.timetableSlot.findMany({
-    where: isAdmin
-      ? { class: { academicYearId: activeYear?.id } }
-      : { staffId: staffRecord?.id },
-    include: {
-      class: true,
-      room: true,
-      staff: { include: { user: true } },
-    },
-    orderBy: [{ dayOfWeek: 'asc' }, { period: 'asc' }],
-  })
+  const slots = activeYear && (isAdmin || staffRecord)
+    ? await db.timetableSlot.findMany({
+        where: isAdmin
+          ? { class: { academicYearId: activeYear.id } }
+          : { staffId: staffRecord!.id, class: { academicYearId: activeYear.id } },
+        include: {
+          class: true,
+          room: true,
+          staff: { include: { user: true } },
+        },
+        orderBy: [{ dayOfWeek: 'asc' }, { period: 'asc' }],
+      })
+    : []
 
   // For the editor dialog and auto-scheduler (admin only)
-  const [classes, rooms, staff, requirements] = isAdmin
+  const [classes, rooms, staff, requirements] = isAdmin && activeYear
     ? await Promise.all([
         db.class.findMany({
-          where: { academicYearId: activeYear?.id },
+          where: { academicYearId: activeYear.id },
           orderBy: [{ yearLevel: 'asc' }, { name: 'asc' }],
         }),
         db.room.findMany({ orderBy: { name: 'asc' } }),
@@ -57,31 +59,31 @@ export default async function TimetablePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Timetable</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Emploi du temps</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {isAdmin ? 'Weekly schedule for all classes' : 'Your weekly class schedule'}
+            {isAdmin ? 'Planning hebdomadaire de toutes les classes' : 'Votre emploi du temps hebdomadaire'}
             {activeYear ? ` — ${activeYear.year}` : ''}
           </p>
         </div>
         <div className="flex items-center gap-2 text-slate-400">
           <Calendar className="w-5 h-5" />
           <span className="text-sm">
-            {isAdmin ? 'Click a cell to add or edit a slot' : 'Read-only view'}
+            {isAdmin ? 'Cliquez sur une case pour ajouter ou modifier un créneau' : 'Consultation uniquement'}
           </span>
         </div>
       </div>
 
       {!activeYear && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
-          No active academic year found. Please set an active academic year first.
+          Aucune année scolaire active. Définissez d’abord l’année scolaire en cours.
         </div>
       )}
 
       {isAdmin ? (
         <Tabs defaultValue="manual">
           <TabsList>
-            <TabsTrigger value="manual">Manual</TabsTrigger>
-            <TabsTrigger value="auto">Auto-Scheduler</TabsTrigger>
+            <TabsTrigger value="manual">Planning manuel</TabsTrigger>
+            <TabsTrigger value="auto">Génération automatique</TabsTrigger>
           </TabsList>
           <TabsContent value="manual" className="pt-4">
             <TimetableGrid

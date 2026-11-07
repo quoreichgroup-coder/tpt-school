@@ -13,12 +13,12 @@ test.describe('Classes & Timetable', () => {
 
   test('timetable grid loads', async ({ page }) => {
     await page.goto('/timetable')
-    await expect(page.getByRole('heading', { name: /timetable/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /emploi du temps|timetable/i })).toBeVisible()
   })
 
   test('new class form renders', async ({ page }) => {
     await page.goto('/classes/new')
-    await expect(page.getByLabel(/Class Name/i)).toBeVisible()
-    await expect(page.getByLabel(/Class Code/i)).toBeVisible()
+    await expect(page.getByLabel(/Nom de la classe|Class Name/i)).toBeVisible()
+    await expect(page.getByLabel(/Code de la classe|Class Code/i)).toBeVisible()
   })
 })

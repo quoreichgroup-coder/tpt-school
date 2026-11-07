@@ -23,7 +23,7 @@ import { Trash2, Plus, AlertTriangle } from 'lucide-react'
 import BulkWizard from './bulk-wizard'
 import type { TimetableConflict } from '@/lib/timetable-conflicts'
 
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+const DAY_NAMES = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
 const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8]
 
 function defaultStartTime(period: number): string {
@@ -129,7 +129,7 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
 
   async function handleSave() {
     if (!editState) return
-    if (!editState.classId) { setError('Please select a class'); return }
+    if (!editState.classId) { setError('Sélectionnez une classe.'); return }
     setLoading(true)
     setError(null)
     const data = {
@@ -148,6 +148,8 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
         : await createSlotAction(data)
       if (result.error) { setError(result.error) }
       else setEditState(null)
+    } catch {
+      setError('Impossible d’enregistrer ce créneau. Vérifiez les conflits et réessayez.')
     } finally {
       setLoading(false)
     }
@@ -156,10 +158,16 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
   async function handleDelete() {
     if (!editState?.slotId) return
     setLoading(true)
-    const result = await deleteSlotAction(editState.slotId)
-    if (result.error) setError(result.error)
-    else setEditState(null)
-    setLoading(false)
+    setError(null)
+    try {
+      const result = await deleteSlotAction(editState.slotId)
+      if (result.error) setError(result.error)
+      else setEditState(null)
+    } catch {
+      setError('Impossible de supprimer ce créneau. Réessayez.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -181,7 +189,7 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
             <span className="text-sm font-semibold text-red-700">
-              {conflicts.length} scheduling conflict{conflicts.length > 1 ? 's' : ''} detected
+              {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''} détecté{conflicts.length > 1 ? 's' : ''}
             </span>
           </div>
           <ul className="space-y-1">
@@ -202,7 +210,7 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
         <div className="grid grid-cols-6 min-w-[640px]">
           {/* Header row */}
           <div className="bg-slate-50 border-b border-r border-slate-200 p-3 text-xs font-medium text-slate-500 uppercase tracking-wide">
-            Period
+            Créneau
           </div>
           {DAY_NAMES.map((day, i) => (
             <div
@@ -268,8 +276,8 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {editState?.slotId ? 'Edit' : 'Add'} Timetable Slot
-                {editState && ` — ${DAY_NAMES[editState.day - 1]}, Period ${editState.period}`}
+                {editState?.slotId ? 'Modifier' : 'Ajouter'} un créneau
+                {editState && ` — ${DAY_NAMES[editState.day - 1]}, période ${editState.period}`}
               </DialogTitle>
             </DialogHeader>
 
@@ -282,13 +290,13 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
                 )}
 
                 <div className="space-y-2">
-                  <Label>Class *</Label>
+                  <Label>Classe *</Label>
                   <Select
                     value={editState.classId}
                     onValueChange={(v) => setEditState({ ...editState, classId: v ?? '' })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select class" />
+                      <SelectValue placeholder="Sélectionner une classe" />
                     </SelectTrigger>
                     <SelectContent>
                       {classes.map((c) => (
@@ -301,16 +309,16 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Room</Label>
+                  <Label>Salle</Label>
                   <Select
                     value={editState.roomId}
                     onValueChange={(v) => setEditState({ ...editState, roomId: v ?? '' })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select room" />
+                      <SelectValue placeholder="Sélectionner une salle" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No room</SelectItem>
+                      <SelectItem value="">Aucune salle</SelectItem>
                       {rooms.map((r) => (
                         <SelectItem key={r.id} value={r.id}>
                           {r.name} ({r.code})
@@ -321,16 +329,16 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Staff</Label>
+                  <Label>Enseignant</Label>
                   <Select
                     value={editState.staffId}
                     onValueChange={(v) => setEditState({ ...editState, staffId: v ?? '' })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select staff" />
+                      <SelectValue placeholder="Sélectionner un enseignant" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No staff</SelectItem>
+                      <SelectItem value="">Aucun enseignant</SelectItem>
                       {staff.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           {s.user.name}
@@ -342,7 +350,7 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Start Time</Label>
+                    <Label>Heure de début</Label>
                     <Input
                       type="time"
                       value={editState.startTime}
@@ -350,7 +358,7 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>End Time</Label>
+                    <Label>Heure de fin</Label>
                     <Input
                       type="time"
                       value={editState.endTime}
@@ -364,7 +372,7 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
                   <Input
                     value={editState.notes}
                     onChange={(e) => setEditState({ ...editState, notes: e.target.value })}
-                    placeholder="Optional notes..."
+                    placeholder="Notes facultatives…"
                   />
                 </div>
               </div>
@@ -379,15 +387,15 @@ export default function TimetableGrid({ slots, classes, rooms, staff, isAdmin, c
                   disabled={loading}
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
-                  Delete
+                  Supprimer
                 </Button>
               )}
               <div className="flex gap-2 ml-auto">
                 <Button variant="outline" onClick={() => setEditState(null)} disabled={loading}>
-                  Cancel
+                  Annuler
                 </Button>
                 <Button onClick={handleSave} disabled={loading}>
-                  {loading ? 'Saving...' : 'Save'}
+                  {loading ? 'Enregistrement…' : 'Enregistrer'}
                 </Button>
               </div>
             </DialogFooter>

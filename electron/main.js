@@ -1,3 +1,5 @@
+// Electron's main process configuration uses CommonJS by design.
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { app, BrowserWindow, shell } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
@@ -40,7 +42,6 @@ function startNextServer() {
     PORT: String(PORT),
     HOSTNAME: '127.0.0.1',
     NODE_ENV: 'production',
-    DATABASE_URL: `file:${path.join(app.getPath('userData'), 'tpt-school.db')}`,
   }
 
   nextServer = spawn(nodeExe, ['server.js'], {
@@ -60,7 +61,7 @@ function createWindow() {
     height: 820,
     minWidth: 900,
     minHeight: 600,
-    title: 'TPT School',
+    title: 'QSCHOOL',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

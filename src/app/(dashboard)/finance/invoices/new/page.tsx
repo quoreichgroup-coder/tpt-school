@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
 export default async function NewInvoicePage() {
-  await requireRole(['admin'])
+  await requireRole(['admin', 'accountant'])
 
   const settings = await db.schoolSettings.findFirst()
   const currencySymbol = settings?.currencySymbol ?? '$'
@@ -31,7 +31,7 @@ export default async function NewInvoicePage() {
   const feeTypeOptions = feeTypes.map(ft => ({
     id: ft.id,
     name: ft.name,
-    amount: ft.amount,
+    amount: Number(ft.amount),
   }))
 
   return (
@@ -42,9 +42,9 @@ export default async function NewInvoicePage() {
           className="inline-flex items-center text-sm text-slate-500 hover:text-slate-700 mb-4"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Finance
+          Retour aux finances
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">New Invoice</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Nouvelle facture</h1>
       </div>
       <InvoiceForm
         students={studentOptions}

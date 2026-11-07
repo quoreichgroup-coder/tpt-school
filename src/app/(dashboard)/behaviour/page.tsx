@@ -22,22 +22,35 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 export default async function BehaviourPage() {
-  await requireRole(["admin", "teacher"]);
+  const session = await requireRole(["admin", "teacher"]);
+  const teacherStudentScope = session.role === 'teacher'
+    ? {
+        student: {
+          classEnrolments: {
+            some: {
+              status: 'active',
+              class: { teachers: { some: { staff: { userId: session.id } } } },
+            },
+          },
+        },
+      }
+    : undefined
 
   const [incidents, suspensions, truancyAlerts] = await Promise.all([
     db.behaviourIncident.findMany({
+      where: teacherStudentScope,
       include: { student: { include: { user: true } } },
       orderBy: { date: "desc" },
       take: 50,
     }),
     db.suspension.findMany({
-      where: { returnDate: null },
+      where: { returnDate: null, ...teacherStudentScope },
       include: { student: { include: { user: true } } },
       orderBy: { startDate: "desc" },
       take: 20,
     }),
     db.truancyAlert.findMany({
-      where: { resolvedAt: null },
+      where: { resolvedAt: null, ...teacherStudentScope },
       include: { student: { include: { user: true } } },
       orderBy: { alertDate: "desc" },
     }),
@@ -55,9 +68,9 @@ export default async function BehaviourPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/behaviour/exit" className={buttonVariants({ variant: 'outline' })}>
+          {session.role === 'admin' && <Link href="/behaviour/exit" className={buttonVariants({ variant: 'outline' })}>
             Process Student Exit
-          </Link>
+          </Link>}
           <Link href="/behaviour/new" className={buttonVariants()}>
             Log Incident
           </Link>

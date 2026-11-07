@@ -5,6 +5,7 @@ const PUBLIC_PATHS = ['/login', '/setup', '/unauthorized', '/forgot-password', '
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+  if (pathname === '/api/health' || pathname.startsWith('/api/v1/')) return NextResponse.next()
 
   if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) return NextResponse.next()
   if (pathname === '/') return NextResponse.redirect(new URL('/dashboard', request.url))

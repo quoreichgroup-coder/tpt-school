@@ -66,8 +66,15 @@ export default function TransferInPanel({ studentId, canEdit, transferIn }: Prop
   }, [studentId, canEdit])
 
   useEffect(() => {
-    loadSuggestions()
-  }, [loadSuggestions])
+    let active = true
+    if (canEdit) {
+      getSuggestedClassesAction(studentId)
+        .then(result => { if (active) setSuggestions(result) })
+        .catch(() => { if (active) setSuggestions([]) })
+        .finally(() => { if (active) setLoadingSuggestions(false) })
+    }
+    return () => { active = false }
+  }, [studentId, canEdit])
 
   async function handleEnroll(classId: string) {
     setEnrollingId(classId)

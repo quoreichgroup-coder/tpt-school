@@ -1,6 +1,7 @@
 import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import ReportCardEditor from './report-card-editor'
 
@@ -10,7 +11,7 @@ type PageProps = {
 }
 
 export default async function ReportCardEditorPage({ params, searchParams }: PageProps) {
-  await requireRole(['admin', 'teacher'])
+  const actor = await requireRole(['admin', 'teacher'])
 
   const { studentId } = await params
   const sp = await searchParams
@@ -32,8 +33,34 @@ export default async function ReportCardEditorPage({ params, searchParams }: Pag
     return <div className="p-8 text-slate-500">Student not found.</div>
   }
 
+  if (actor.role === 'teacher') {
+    const selectedTerm = termId ? terms.find(term => term.id === termId) : null
+    const assignedClass = await db.classEnrolment.findFirst({
+      where: {
+        studentId,
+        status: 'active',
+        class: {
+          ...(selectedTerm ? { academicYearId: selectedTerm.academicYearId } : {}),
+          teachers: { some: { staff: { userId: actor.id } } },
+        },
+      },
+      select: { id: true },
+    })
+    if (!assignedClass) redirect('/unauthorized')
+  }
+
   const existingCard = termId
-    ? await db.reportCard.findUnique({ where: { studentId_termId: { studentId, termId } } })
+    ? await db.reportCard.findUnique({
+      where: { studentId_termId: { studentId, termId } },
+      include: {
+        reviewer: { select: { name: true } },
+        revisions: {
+          orderBy: { createdAt: 'desc' },
+          take: 8,
+          include: { actor: { select: { name: true } } },
+        },
+      },
+    })
     : null
 
   const aiEnabled = !!settings?.aiProvider && settings.aiProvider !== 'none'
@@ -59,7 +86,20 @@ export default async function ReportCardEditorPage({ params, searchParams }: Pag
         selectedTermId={termId ?? null}
         initialComments={existingCard?.comments ?? ''}
         initialTeacherNotes={existingCard?.teacherNotes ?? ''}
-        initialPrincipalNotes={existingCard?.principalNotes ?? ''}
+        initialPrincipalNotes={actor.role === 'admin' ? existingCard?.principalNotes ?? '' : ''}
+        isAdmin={actor.role === 'admin'}
+        approvalStatus={existingCard?.approvalStatus ?? 'draft'}
+        reviewedBy={existingCard?.reviewer?.name ?? null}
+        rejectionReason={existingCard?.rejectionReason ?? null}
+        revisions={existingCard?.revisions.map(revision => ({
+          id: revision.id,
+          action: revision.action,
+          actorName: revision.actor.name,
+          createdAt: revision.createdAt.toISOString(),
+          approvalStatus: revision.approvalStatus,
+          comments: revision.comments,
+          rejectionReason: revision.rejectionReason,
+        })) ?? []}
         aiEnabled={aiEnabled}
       />
     </div>

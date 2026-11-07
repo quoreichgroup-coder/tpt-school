@@ -20,7 +20,7 @@ interface PageProps {
 }
 
 export default async function GradebookDetailPage({ params }: PageProps) {
-  await requireRole(['admin', 'teacher'])
+  const actor = await requireRole(['admin', 'teacher'])
   const { id } = await params
 
   const gradebook = await db.gradebook.findUnique({
@@ -37,10 +37,19 @@ export default async function GradebookDetailPage({ params }: PageProps) {
       },
       term: { include: { academicYear: true } },
       grades: true,
+      exam: { select: { status: true } },
     },
   })
 
   if (!gradebook) notFound()
+  if (actor.role === 'teacher') {
+    const staff = await db.staff.findUnique({ where: { userId: actor.id }, select: { id: true } })
+    const assignment = staff ? await db.classTeacher.findUnique({
+      where: { classId_staffId: { classId: gradebook.classId, staffId: staff.id } },
+      select: { classId: true },
+    }) : null
+    if (!assignment) notFound()
+  }
 
   type GradeRec = {
     id: string
@@ -116,6 +125,7 @@ export default async function GradebookDetailPage({ params }: PageProps) {
               <Badge variant="outline">Due: {format(new Date(gradebook.dueDate), 'dd MMM yyyy')}</Badge>
             )}
             <Badge variant="outline">Max: {gradebook.maxScore}</Badge>
+            <Badge variant="outline">Coefficient: {gradebook.weight}</Badge>
             {gradebook.documentUrl && (
               <a
                 href={gradebook.documentUrl}
@@ -137,6 +147,11 @@ export default async function GradebookDetailPage({ params }: PageProps) {
       </div>
 
       {/* Submission banner */}
+      {gradebook.exam?.status === 'cancelled' && (
+        <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          This exam was cancelled. Existing grades remain available for review, but new grade changes are disabled.
+        </div>
+      )}
       {submittedCount > 0 && (
         <div className={`rounded-xl px-4 py-3 text-sm border ${ungradedSubmissions > 0 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
           {ungradedSubmissions > 0
@@ -169,11 +184,11 @@ export default async function GradebookDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      <GradeEntry
+      {gradebook.exam?.status !== 'cancelled' && <GradeEntry
         gradebookId={gradebook.id}
         maxScore={gradebook.maxScore}
         students={students}
-      />
+      />}
 
     </div>
   )

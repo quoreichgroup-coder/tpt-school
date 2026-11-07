@@ -1,151 +1,129 @@
-# TPT School.
+# QSCHOOL
 
-A school management system built with [Next.js](https://nextjs.org), [Prisma](https://prisma.io), and [SQLite](https://sqlite.org). Tracks students, classes, attendance, grades, and more.
+QSCHOOL is a school management application: students, classes, attendance, grades, communication
+and finance. Built with Next.js 16, React 19, TypeScript, Prisma 7 and PostgreSQL.
+Authentication currently uses custom database sessions and bcrypt.
 
-## Features
+## Docker development
 
-- **Student management** — enroll, edit, and archive students
-- **Class scheduling** — create and manage classes with assigned teachers
-- **Attendance tracking** — mark and view attendance per class/student
-- **Grading** — record and calculate grades
-- **Reports** — export report cards and summaries (PDF)
-- **Authentication** — secure login via NextAuth
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 20+
-- npm
-
-### Local development
+Install Docker Engine/Desktop with Docker Compose v2 or newer.
 
 ```bash
-# Install dependencies
-npm ci
-
-# Set up environment variables
 cp .env.example .env
+openssl rand -hex 32  # POSTGRES_PASSWORD
+openssl rand -hex 32  # AUTH_SECRET (use a different value)
+```
 
-# Run database migrations
-npx prisma migrate dev
+Fill both variables in `.env`. Use a hexadecimal database password to avoid URL
+escaping issues. Keep `AUTH_SECRET` stable: it also protects stored credentials.
 
-# Start the dev server
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml up --build
+```
+
+Open http://localhost:3000/setup to create the school and its first administrator.
+Source changes in `src/` reload automatically. The development container mounts the
+current Prisma schema and PostgreSQL migration history, and generates its client into
+a private Docker volume at startup.
+After changing `prisma/schema.prisma`, restart `web` to regenerate its container client
+and run `npm run db:generate` on the host for local type-checking. Rebuild after changing
+dependencies. The development override exposes PostgreSQL only on `127.0.0.1:5432`;
+change `POSTGRES_PORT` if necessary.
+
+To run Next.js directly on the host (Node.js 22.12+):
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml up -d db
+npm ci
+# Set DATABASE_URL in .env with your database password and localhost port.
+npm run db:generate
+npm run db:migrate
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+## Mobile app
 
-## Deployment
+Install dependencies once from the repository root (`npm ci`); `apps/mobile` is an npm
+workspace and shares the root React installation. Copy
+`apps/mobile/.env.example` to `apps/mobile/.env` and set `EXPO_PUBLIC_API_URL` to the
+reachable web API URL, then run `npm run mobile:start`.
+Use `npm run mobile:android` or `npm run mobile:ios` to launch on a connected emulator.
+Cloud EAS builds use `apps/mobile/eas.json` and require an Expo account. Create an
+Android APK with `npx eas-cli build --platform android --profile preview` or an iOS
+Simulator build with `npx eas-cli build --platform ios --profile simulator`. Installing
+an iOS build on a physical iPhone requires Apple Developer signing credentials and a
+registered test device; the `preview` profile is configured for ad hoc IPA distribution.
+The app icon sources live in `apps/mobile/assets/qschool-*.svg`; regenerate platform
+icons with `npm run mobile:icons`.
 
-### One-step wizard (recommended)
+## Production deployment
 
-SSH into any Linux server (Ubuntu recommended), clone the repo, and run:
-
-```bash
-git clone https://github.com/PhillipC05/tpt-school.git
-cd tpt-school
-chmod +x deploy.sh
-./deploy.sh
-```
-
-The script will:
-1. Install Node.js if missing
-2. Create your `.env` and generate a secure `AUTH_SECRET`
-3. Ask you for the public URL (e.g. `https://school.example.com`)
-4. Install dependencies, run migrations, and build
-5. Start the app with pm2 (auto-restart on reboot)
-
-That's it — your app is live. The deploy wizard works on any VPS from any provider.
-
-### Docker
+Set `.env` secrets and `NEXTAUTH_URL=https://school.example.com`, then run:
 
 ```bash
 docker compose up -d --build
+# Equivalent helper:
+./deploy.sh
 ```
 
-The app will be available on port `3000` with the SQLite database persisted in a Docker volume. Override `AUTH_SECRET` and `NEXTAUTH_URL` in `docker-compose.yml` for production.
+The `db` service stores PostgreSQL data in a named volume. `migrate` applies the
+PostgreSQL migrations once and must succeed before `web` starts. The web image
+runs Next.js standalone as a non-root user. PostgreSQL has no published port in
+this configuration. `/api/health` checks database connectivity without login.
 
-### VPS (manual)
-
-A cheap VPS is the most practical way to host this app, since SQLite needs a persistent filesystem and you don't need a separate database server.
-
-#### Recommended VPS providers
-
-| Provider | Cheapest plan | Notes |
-|----------|---------------|-------|
-| **Hetzner** | ~€4/mo (2 vCPU, 4 GB RAM) | Best price/performance. Good for a small school. |
-| **DigitalOcean** | $6/mo (1 vCPU, 1 GB RAM) | Simple control panel, lots of tutorials, reliable — but Hetzner gives more for less. |
-| **Linode (Akamai)** | $12/mo (1 vCPU, 1 GB RAM) | Solid alternative, decent docs. |
-| **AWS Lightsail** | $3.50/mo (512 MB, 1 vCPU) | Cheapest entry, but limited RAM — only suitable for very light use. |
-
-**Is DigitalOcean the best?** Not strictly — Hetzner gives you 4× the RAM for the same price. But DigitalOcean has the simplest UI, great tutorials, and is more than enough for a single-school TPT deployment. If you're comfortable with a slightly less polished dashboard, Hetzner is the better value. Any of them will work fine.
-
-#### Step-by-step (Ubuntu 22.04+)
+Place an HTTPS reverse proxy in front of `127.0.0.1:3000`. Production session
+cookies require HTTPS; use the development command for local HTTP testing.
+`BIND_ADDRESS` and `PORT` control the web port binding. For a reverse proxy in
+another container, configure a shared Docker network explicitly.
 
 ```bash
-# 1. SSH into the VPS
-ssh root@your-vps-ip
-
-# 2. Install Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt-get install -y nodejs
-
-# 3. Install pm2
-npm install -g pm2
-
-# 4. Clone the repo
-git clone https://github.com/PhillipC05/tpt-school.git
-cd tpt-school
-
-# 5. Set up environment
-cp .env.example .env
-nano .env
-#   - AUTH_SECRET: generate one with `openssl rand -base64 32`
-#   - NEXTAUTH_URL: set to your domain or IP, e.g. http://your-vps-ip:3000
-#   - DATABASE_URL: leave as file:./dev.db (it'll live inside the project dir)
-
-# 6. Install, migrate, build
-npm ci
-npx prisma migrate deploy
-npm run build
-
-# 7. Start
-pm2 start .next/standalone/server.js --name tpt-school
-pm2 save
-pm2 startup
-
-# 8. Set up a reverse proxy (optional but recommended)
-#    Install Nginx to serve on port 80/443 with a domain name:
-apt-get install -y nginx
-#    Then configure /etc/nginx/sites-available/tpt-school to proxy
-#    requests to localhost:3000 and add SSL via Certbot.
+docker compose ps
+docker compose logs --tail=100 web migrate
+docker compose down  # Preserves the database volume
 ```
 
-After those steps the app will be running on port `3000` and will restart automatically if the server reboots.
+Do not use `down -v` unless you intend to delete the database.
 
-### Manual (any machine)
+## Backups and existing SQLite data
 
 ```bash
-npm ci
-cp .env.example .env         # edit AUTH_SECRET + NEXTAUTH_URL
-npx prisma migrate deploy
-npm run build
-node .next/standalone/server.js
+sh scripts/backup-postgres.sh
+sh scripts/verify-postgres-backup.sh backups/tpt-school-YYYYMMDDTHHMMSSZ.dump
 ```
 
-### Vercel (requires PostgreSQL/MySQL)
+The backup command writes a mode-600 custom-format dump atomically and validates
+its archive before publishing the filename. The verification command restores
+it into a generated temporary database on the Compose PostgreSQL service,
+checks the QSCHOOL tables, and drops the temporary database when it exits.
+Keep dated backups outside the server. A Docker volume is not a backup.
 
-SQLite won't work on Vercel's serverless functions. Swap to a hosted database like [Neon](https://neon.tech) or [PlanetScale](https://planetscale.com) and update the Prisma schema.
+New Compose volumes still start as an empty PostgreSQL database; initialization
+does not import legacy data automatically. The existing `dev.db` was migrated
+manually into the current local Compose database on 2026-11-05; see the
+[SQLite inventory and migration report](docs/sqlite-inventory.md). The SQLite
+source and its original migrations in `prisma/migrations/` remain preserved as
+legacy material. Active migrations are in `prisma/migrations-postgresql/`.
+For a different source/target pair, use `scripts/migrate-sqlite-to-postgres.py`
+with a fresh target, verified backups, and a passing dry-run. Do not apply
+SQLite SQL to PostgreSQL or point this version at a SQLite URL.
 
-## Tech Stack
+The existing Electron launcher now inherits `DATABASE_URL` and needs access to
+PostgreSQL; standalone offline desktop distribution is not provided by this setup.
+The Expo application and role-scoped mobile API are in `apps/mobile` and `src/app/api/v1`.
+See `docs/mobile-api.md` for mobile auth, permissions, request bodies, and response
+scope; `docs/plan-developpement-qschool.md` tracks delivered work and next phases.
 
-- [Next.js](https://nextjs.org) (App Router)
-- [Prisma](https://prisma.io) (ORM with SQLite)
-- [NextAuth](https://next-auth.js.org) (authentication)
-- [Tailwind CSS](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) (UI)
-- [React PDF](https://react-pdf.org) (report generation)
-- [Playwright](https://playwright.dev) (E2E tests)
+## Commands and design system
+
+- `npm run build`: production build with webpack for the existing PWA plugin.
+- `npm start`: run a local production build.
+- `npm run lint`: ESLint.
+- `npm run test:e2e`: Playwright; requires `E2E_DATABASE_URL` for a dedicated local PostgreSQL database whose name contains `e2e` or `test`. The runner applies migrations there, uses port 3100 by default, and refuses remote databases or a reused server. For example, create `tpt_school_e2e` in local Compose and run `E2E_DATABASE_URL=postgresql://tpt:<password>@localhost:5432/tpt_school_e2e npm run test:e2e`.
+- `npm run db:seed`: optional demo data with known demo passwords; development only.
+
+See [the design system](docs/design-system.md) derived from `charte graphique.pdf`:
+blue `#0062DB`, orange `#FF8A51`, Montserrat and Playfair Display. Fonts are bundled
+locally. Shared design tokens are in `src/design-system/tokens.json`.
 
 ## License
 

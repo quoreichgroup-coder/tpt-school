@@ -1,7 +1,8 @@
 {
-  "name": "TPT School",
-  "short_name": "TPT School",
-  "description": "School management platform",
+  "name": "QSCHOOL",
+  "short_name": "QSCHOOL",
+  "description": "Plateforme de gestion scolaire QSCHOOL",
+  "lang": "fr",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",

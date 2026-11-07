@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
@@ -33,6 +33,17 @@ export default async function IncidentDetailPage({ params }: PageProps) {
   })
 
   if (!incident) notFound()
+  if (session.role === 'teacher') {
+    const assigned = await db.classEnrolment.findFirst({
+      where: {
+        studentId: incident.studentId,
+        status: 'active',
+        class: { teachers: { some: { staff: { userId: session.id } } } },
+      },
+      select: { id: true },
+    })
+    if (!assigned) redirect('/unauthorized')
+  }
 
   const reporter = await db.user.findUnique({
     where: { id: incident.reportedById },
@@ -183,6 +194,7 @@ export default async function IncidentDetailPage({ params }: PageProps) {
           followUpRequired: incident.followUpRequired,
           followUpNotes: incident.followUpNotes,
         }}
+        canEdit={session.role === 'admin' || incident.reportedById === session.id}
         canSuspend={session.role === 'admin'}
       />
     </div>

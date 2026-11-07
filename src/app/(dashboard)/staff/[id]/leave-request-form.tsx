@@ -49,7 +49,7 @@ export default function LeaveRequestForm({ staffId }: Props) {
         setEndDate('')
         setReason('')
       } else {
-        setError(result.error ?? 'Something went wrong.')
+        setError(result.error ?? 'Une erreur est survenue.')
       }
     })
   }
@@ -65,30 +65,30 @@ export default function LeaveRequestForm({ staffId }: Props) {
       {success && (
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
-          Leave request submitted successfully.
+          Demande de congé envoyée avec succès.
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-1.5">
-          <Label htmlFor="leaveType">Leave Type <span className="text-destructive">*</span></Label>
+          <Label htmlFor="leaveType">Type de congé <span className="text-destructive">*</span></Label>
           <Select value={type} onValueChange={(v) => { if (v !== null) setType(v) }} required>
             <SelectTrigger id="leaveType" className="w-full">
-              <SelectValue placeholder="Select type" />
+              <SelectValue placeholder="Sélectionner un type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="annual">Annual Leave</SelectItem>
-              <SelectItem value="sick">Sick Leave</SelectItem>
-              <SelectItem value="personal">Personal Leave</SelectItem>
-              <SelectItem value="bereavement">Bereavement Leave</SelectItem>
-              <SelectItem value="unpaid">Unpaid Leave</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
+              <SelectItem value="annual">Congé annuel</SelectItem>
+              <SelectItem value="sick">Congé maladie</SelectItem>
+              <SelectItem value="personal">Congé pour motif personnel</SelectItem>
+              <SelectItem value="bereavement">Congé pour décès d’un proche</SelectItem>
+              <SelectItem value="unpaid">Congé sans solde</SelectItem>
+              <SelectItem value="other">Autre</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="startDate">Start Date <span className="text-destructive">*</span></Label>
+          <Label htmlFor="startDate">Date de début <span className="text-destructive">*</span></Label>
           <Input
             id="startDate"
             type="date"
@@ -99,7 +99,7 @@ export default function LeaveRequestForm({ staffId }: Props) {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="endDate">End Date <span className="text-destructive">*</span></Label>
+          <Label htmlFor="endDate">Date de fin <span className="text-destructive">*</span></Label>
           <Input
             id="endDate"
             type="date"
@@ -111,19 +111,19 @@ export default function LeaveRequestForm({ staffId }: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="reason">Reason</Label>
+        <Label htmlFor="reason">Motif</Label>
         <Textarea
           id="reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Optional: provide a reason for the leave request…"
+          placeholder="Facultatif : précisez le motif de la demande…"
           rows={3}
         />
       </div>
 
       <Button type="submit" disabled={isPending}>
         {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-        Submit Request
+        Envoyer la demande
       </Button>
     </form>
   )

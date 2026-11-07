@@ -10,7 +10,7 @@ import { Wand2, ChevronDown, ChevronRight, CheckCircle2, AlertCircle, Plus } fro
 import { cn } from '@/lib/utils'
 import { bulkCreateSlotsAction } from './actions'
 
-const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
 
 type PeriodConfig = {
   period: number
@@ -130,10 +130,15 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
       }
     })
 
-    const res = await bulkCreateSlotsAction(slots)
-    setResult(res)
-    if (res.created > 0) setSelected(new Set())
-    setSubmitting(false)
+    try {
+      const res = await bulkCreateSlotsAction(slots)
+      setResult(res)
+      if (res.created > 0) setSelected(new Set())
+    } catch {
+      setResult({ created: 0, skipped: 0, errors: ['Impossible de créer les créneaux. Réessayez.'] })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const classOptions = classes.map((c) => ({ value: c.id, label: c.name, sublabel: c.code }))
@@ -151,7 +156,7 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
         }}
       >
         <Wand2 className="w-4 h-4" />
-        Bulk Schedule
+        Planification par lot
       </Button>
 
       <Dialog
@@ -162,7 +167,7 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
       >
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Bulk Schedule Wizard</DialogTitle>
+            <DialogTitle>Assistant de planification par lot</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5">
@@ -173,7 +178,7 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
                 onClick={() => setShowPeriods((p) => !p)}
                 className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
               >
-                <span>Configure Period Times</span>
+                <span>Configurer les horaires des créneaux</span>
                 {showPeriods ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
               {showPeriods && (
@@ -217,7 +222,7 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
                     </div>
                   ))}
                   <Button type="button" variant="outline" size="xs" onClick={addPeriod} className="mt-2">
-                    <Plus className="w-3.5 h-3.5" /> Add Period
+                    <Plus className="w-3.5 h-3.5" /> Ajouter un créneau
                   </Button>
                 </div>
               )}
@@ -226,7 +231,7 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
             {/* Class / teacher / room */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>Class *</Label>
+                <Label>Classe *</Label>
                 <Combobox
                   options={classOptions}
                   value={classId}
@@ -235,29 +240,29 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
                     setSelected(new Set())
                     setResult(null)
                   }}
-                  placeholder="Select class…"
+                  placeholder="Sélectionner une classe…"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Teacher</Label>
+                <Label>Enseignant</Label>
                 <Combobox
                   options={staffOptions}
                   value={staffId}
                   onValueChange={setStaffId}
-                  placeholder="Select teacher…"
+                  placeholder="Sélectionner un enseignant…"
                   allowClear
-                  clearLabel="None"
+                  clearLabel="Aucun"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Room</Label>
+                <Label>Salle</Label>
                 <Combobox
                   options={roomOptions}
                   value={roomId}
                   onValueChange={setRoomId}
-                  placeholder="Select room…"
+                  placeholder="Sélectionner une salle…"
                   allowClear
-                  clearLabel="None"
+                  clearLabel="Aucune"
                 />
               </div>
             </div>
@@ -266,12 +271,12 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
             {classId && (
               <div>
                 <p className="text-sm text-slate-600 mb-3">
-                  Click cells to select which periods this class meets:
+                  Cliquez sur les cases pour sélectionner les créneaux de cette classe :
                 </p>
                 <div className="border border-border rounded-lg overflow-hidden">
                   {/* Header */}
                   <div className="grid grid-cols-6 text-center text-xs font-medium bg-slate-50 border-b border-border">
-                    <div className="p-2 border-r border-border text-slate-500">Period</div>
+                    <div className="p-2 border-r border-border text-slate-500">Créneau</div>
                     {DAY_NAMES.map((d, i) => (
                       <div key={d} className={cn('p-2', i < 4 && 'border-r border-border')}>
                         {d}
@@ -307,9 +312,9 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
                           >
                             {isSameClass ? (
                               <span className="text-slate-400 text-center leading-tight text-[11px]">
-                                Already
+                                Déjà
                                 <br />
-                                scheduled
+                                planifié
                               </span>
                             ) : isSelected ? (
                               <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
@@ -331,11 +336,11 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
 
                 {/* Quick select */}
                 <div className="flex gap-3 mt-2 flex-wrap items-center">
-                  <span className="text-xs text-slate-500">Quick select:</span>
+                  <span className="text-xs text-slate-500">Sélection rapide :</span>
                   {[
-                    { label: 'Mon / Wed / Fri', days: [1, 3, 5] },
-                    { label: 'Tue / Thu', days: [2, 4] },
-                    { label: 'Mon – Fri (all)', days: [1, 2, 3, 4, 5] },
+                    { label: 'Lun. / mer. / ven.', days: [1, 3, 5] },
+                    { label: 'Mar. / jeu.', days: [2, 4] },
+                    { label: 'Du lundi au vendredi', days: [1, 2, 3, 4, 5] },
                   ].map(({ label, days }) => (
                     <button
                       key={label}
@@ -352,7 +357,7 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
                       onClick={() => setSelected(new Set())}
                       className="text-xs text-slate-400 underline underline-offset-2 hover:text-slate-600"
                     >
-                      Clear selection
+                      Effacer la sélection
                     </button>
                   )}
                 </div>
@@ -372,11 +377,11 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
                 {result.created > 0 && (
                   <p className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    {result.created} slot{result.created !== 1 ? 's' : ''} created successfully.
+                    {result.created} créneau{result.created !== 1 ? 'x' : ''} créé{result.created !== 1 ? 's' : ''} avec succès.
                   </p>
                 )}
                 {result.skipped > 0 && !result.errors.length && (
-                  <p>{result.skipped} slot{result.skipped !== 1 ? 's' : ''} skipped (already exist).</p>
+                  <p>{result.skipped} créneau{result.skipped !== 1 ? 'x' : ''} ignoré{result.skipped !== 1 ? 's' : ''} (déjà existant{result.skipped !== 1 ? 's' : ''}).</p>
                 )}
                 {result.errors.map((e, i) => (
                   <p key={i} className="flex items-center gap-1.5">
@@ -395,15 +400,15 @@ export default function BulkWizard({ classes, rooms, staff, existingSlots }: Pro
                 setOpen(false)
               }}
             >
-              Done
+              Terminer
             </Button>
             <Button
               onClick={handleCreate}
               disabled={!classId || selected.size === 0 || submitting}
             >
               {submitting
-                ? 'Creating…'
-                : `Create ${selected.size} Slot${selected.size !== 1 ? 's' : ''}`}
+                ? 'Création…'
+                : `Créer ${selected.size} créneau${selected.size !== 1 ? 'x' : ''}`}
             </Button>
           </DialogFooter>
         </DialogContent>

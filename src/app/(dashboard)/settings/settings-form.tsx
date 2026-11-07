@@ -85,7 +85,7 @@ export default function SettingsForm({ settings }: Props) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="shortName">Short Name</Label>
-              <Input id="shortName" name="shortName" defaultValue={settings.shortName ?? ''} placeholder="e.g. TPT" />
+              <Input id="shortName" name="shortName" defaultValue={settings.shortName ?? ''} placeholder="e.g. QS" />
             </div>
           </div>
 

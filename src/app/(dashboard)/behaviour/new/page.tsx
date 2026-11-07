@@ -3,10 +3,17 @@ import { db } from "@/lib/db";
 import { IncidentForm } from "../incident-form";
 
 export default async function NewIncidentPage() {
-  await requireRole(["admin", "teacher"]);
+  const session = await requireRole(["admin", "teacher"]);
 
   const students = await db.student.findMany({
-    where: { enrollmentStatus: "active" },
+    where: {
+      enrollmentStatus: "active",
+      ...(session.role === 'teacher' ? {
+        classEnrolments: {
+          some: { status: 'active', class: { teachers: { some: { staff: { userId: session.id } } } } },
+        },
+      } : {}),
+    },
     include: { user: { select: { name: true } } },
     orderBy: { user: { name: "asc" } },
   });

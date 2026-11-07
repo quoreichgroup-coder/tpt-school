@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import Link from 'next/link'
 import { ChevronLeft, Download } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { weightedAveragePercent, type WeightedAssessment } from '@/lib/grade-calculation'
 
 type SearchParams = {
   classId?: string
@@ -46,21 +47,23 @@ export default async function GradesReportPage({
     orderBy: { class: { name: 'asc' } },
   })
 
-  // Build rows: per student, average score across gradebooks
-  type StudentRow = { id: string; name: string; scores: number[]; avg: number | null }
+  // Build normalized, coefficient-weighted averages per student.
+  type StudentRow = { id: string; name: string; assessments: WeightedAssessment[]; avg: number | null }
   const studentMap = new Map<string, StudentRow>()
 
   for (const gb of gradebooks) {
     for (const grade of gb.grades) {
       const existing = studentMap.get(grade.studentId)
-      const score = grade.score != null ? grade.score : null
+      const assessment = grade.score != null
+        ? { score: grade.score, maxScore: gb.maxScore, weight: gb.weight }
+        : null
       if (existing) {
-        if (score != null) existing.scores.push(score)
+        if (assessment) existing.assessments.push(assessment)
       } else {
         studentMap.set(grade.studentId, {
           id: grade.studentId,
           name: grade.student.user.name,
-          scores: score != null ? [score] : [],
+          assessments: assessment ? [assessment] : [],
           avg: null,
         })
       }
@@ -69,10 +72,12 @@ export default async function GradesReportPage({
 
   const rows = Array.from(studentMap.values()).map(row => ({
     ...row,
-    avg: row.scores.length > 0
-      ? Math.round(row.scores.reduce((s, n) => s + n, 0) / row.scores.length * 10) / 10
-      : null,
+    avg: weightedAveragePercent(row.assessments),
   })).sort((a, b) => a.name.localeCompare(b.name))
+
+  for (const row of rows) {
+    if (row.avg !== null) row.avg = Math.round(row.avg * 10) / 10
+  }
 
   const classAvg = rows.length > 0
     ? Math.round(
@@ -165,14 +170,14 @@ export default async function GradesReportPage({
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="text-left px-4 py-3 font-medium text-slate-600">Student</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-600">Grades Recorded</th>
-                <th className="text-center px-4 py-3 font-medium text-slate-600">Average Score</th>
+                <th className="text-center px-4 py-3 font-medium text-slate-600">Weighted Average</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {rows.map(row => (
                 <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3 font-medium text-slate-900">{row.name}</td>
-                  <td className="px-4 py-3 text-center text-slate-600">{row.scores.length}</td>
+                  <td className="px-4 py-3 text-center text-slate-600">{row.assessments.length}</td>
                   <td className="px-4 py-3 text-center">
                     {row.avg != null ? (
                       <span
@@ -197,7 +202,7 @@ export default async function GradesReportPage({
               <tr className="bg-slate-100 font-semibold">
                 <td className="px-4 py-3 text-slate-700">Class Average</td>
                 <td className="px-4 py-3 text-center text-slate-700">
-                  {rows.reduce((s, r) => s + r.scores.length, 0)}
+                  {rows.reduce((s, r) => s + r.assessments.length, 0)}
                 </td>
                 <td className="px-4 py-3 text-center">
                   {classAvg != null ? (

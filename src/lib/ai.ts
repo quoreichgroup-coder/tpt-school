@@ -114,8 +114,7 @@ async function callOpenAICompat(
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
   if (provider === 'openrouter') {
-    headers['HTTP-Referer'] = 'https://tpt-school'
-    headers['X-Title'] = 'TPT School'
+    headers['X-Title'] = 'QSCHOOL'
   }
 
   const res = await fetch(`${baseUrl}/chat/completions`, {

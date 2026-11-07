@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, UserMinus, BookOpen, Calendar, Award } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -16,8 +16,15 @@ import {
 } from '@/components/ui/table'
 import { unenrolStudentAction } from '../actions'
 import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+const DAY_NAMES = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
+const GRADEBOOK_TYPE_LABELS: Record<string, string> = {
+  assessment: 'Évaluation',
+  exam: 'Examen',
+  homework: 'Devoir',
+  quiz: 'Interrogation',
+}
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -52,6 +59,9 @@ export default async function ClassDetailPage({ params }: PageProps) {
   })
 
   if (!cls) notFound()
+  if (user.role === 'teacher' && !cls.teachers.some((teacher) => teacher.staff.user.id === user.id)) {
+    redirect('/unauthorized')
+  }
 
   const primaryTeacher = cls.teachers.find((t) => t.isPrimary)
 
@@ -64,7 +74,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
           className="inline-flex items-center text-sm text-slate-500 hover:text-slate-700 mb-4"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Classes
+          Retour aux classes
         </Link>
         <div className="flex items-start justify-between">
           <div>
@@ -73,12 +83,12 @@ export default async function ClassDetailPage({ params }: PageProps) {
               <span className="font-mono text-sm bg-slate-100 px-2 py-0.5 rounded text-slate-600">
                 {cls.code}
               </span>
-              {cls.yearLevel && <Badge variant="secondary">Year {cls.yearLevel}</Badge>}
+              {cls.yearLevel && <Badge variant="secondary">Niveau {cls.yearLevel}</Badge>}
             </div>
             {cls.subject && <p className="text-slate-500 mt-1">{cls.subject}</p>}
           </div>
           {user.role === 'admin' && (
-            <Link href={`/classes/${cls.id}/edit`} className={buttonVariants({ variant: 'outline' })}>Edit Class</Link>
+            <Link href={`/classes/${cls.id}/edit`} className={buttonVariants({ variant: 'outline' })}>Modifier la classe</Link>
           )}
         </div>
       </div>
@@ -86,17 +96,17 @@ export default async function ClassDetailPage({ params }: PageProps) {
       {/* Info cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Academic Year</p>
+          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Année scolaire</p>
           <p className="font-semibold text-slate-800 mt-1">{cls.academicYear.year}</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Room</p>
+          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Salle</p>
           <p className="font-semibold text-slate-800 mt-1">
             {cls.room ? `${cls.room.name} (${cls.room.code})` : '—'}
           </p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Primary Teacher</p>
+          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Enseignant principal</p>
           <p className="font-semibold text-slate-800 mt-1">
             {primaryTeacher?.staff.user.name ?? '—'}
           </p>
@@ -108,15 +118,15 @@ export default async function ClassDetailPage({ params }: PageProps) {
         <TabsList>
           <TabsTrigger value="students">
             <BookOpen className="w-4 h-4 mr-2" />
-            Students ({cls.enrolments.length})
+            Élèves ({cls.enrolments.length})
           </TabsTrigger>
           <TabsTrigger value="timetable">
             <Calendar className="w-4 h-4 mr-2" />
-            Timetable ({cls.timetableSlots.length})
+            Emploi du temps ({cls.timetableSlots.length})
           </TabsTrigger>
           <TabsTrigger value="gradebooks">
             <Award className="w-4 h-4 mr-2" />
-            Gradebook ({cls.gradebooks.length})
+            Carnet de notes ({cls.gradebooks.length})
           </TabsTrigger>
         </TabsList>
 
@@ -126,10 +136,10 @@ export default async function ClassDetailPage({ params }: PageProps) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead>Student Name</TableHead>
-                  <TableHead>Student ID</TableHead>
-                  <TableHead>Year Level</TableHead>
-                  <TableHead>Enrolled At</TableHead>
+                  <TableHead>Nom de l’élève</TableHead>
+                  <TableHead>Matricule</TableHead>
+                  <TableHead>Niveau</TableHead>
+                  <TableHead>Date d’inscription</TableHead>
                   {user.role === 'admin' && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -137,7 +147,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
                 {cls.enrolments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-10 text-slate-400">
-                      No students enrolled
+                      Aucun élève inscrit
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -152,10 +162,10 @@ export default async function ClassDetailPage({ params }: PageProps) {
                         {enrolment.student.studentId}
                       </TableCell>
                       <TableCell>
-                        {enrolment.student.yearLevel ? `Year ${enrolment.student.yearLevel}` : '—'}
+                        {enrolment.student.yearLevel ? `Niveau ${enrolment.student.yearLevel}` : '—'}
                       </TableCell>
                       <TableCell className="text-slate-500 text-sm">
-                        {format(new Date(enrolment.enrolledAt), 'dd MMM yyyy')}
+                        {format(new Date(enrolment.enrolledAt), 'dd MMM yyyy', { locale: fr })}
                       </TableCell>
                       {user.role === 'admin' && (
                         <TableCell className="text-right">
@@ -172,7 +182,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                               <UserMinus className="w-4 h-4 mr-1" />
-                              Unenrol
+                              Désinscrire
                             </Button>
                           </form>
                         </TableCell>
@@ -191,11 +201,11 @@ export default async function ClassDetailPage({ params }: PageProps) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead>Day</TableHead>
-                  <TableHead>Period</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Staff</TableHead>
+                  <TableHead>Jour</TableHead>
+                  <TableHead>Créneau</TableHead>
+                  <TableHead>Horaire</TableHead>
+                  <TableHead>Salle</TableHead>
+                  <TableHead>Enseignant</TableHead>
                   <TableHead>Notes</TableHead>
                 </TableRow>
               </TableHeader>
@@ -203,7 +213,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
                 {cls.timetableSlots.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-10 text-slate-400">
-                      No timetable slots assigned
+                      Aucun créneau attribué
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -212,7 +222,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
                       <TableCell className="font-medium">
                         {DAY_NAMES[slot.dayOfWeek - 1]}
                       </TableCell>
-                      <TableCell>Period {slot.period}</TableCell>
+                      <TableCell>Période {slot.period}</TableCell>
                       <TableCell className="text-slate-600">
                         {slot.startTime} – {slot.endTime}
                       </TableCell>
@@ -241,12 +251,12 @@ export default async function ClassDetailPage({ params }: PageProps) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead>Assessment</TableHead>
-                  <TableHead>Term</TableHead>
+                  <TableHead>Évaluation</TableHead>
+                  <TableHead>Trimestre</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead className="text-center">Max Score</TableHead>
-                  <TableHead className="text-center">Grades</TableHead>
+                  <TableHead>Date limite</TableHead>
+                  <TableHead className="text-center">Note maximale</TableHead>
+                  <TableHead className="text-center">Notes saisies</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -254,7 +264,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
                 {cls.gradebooks.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-10 text-slate-400">
-                      No assessments yet
+                      Aucune évaluation pour le moment
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -263,15 +273,15 @@ export default async function ClassDetailPage({ params }: PageProps) {
                       <TableCell className="font-medium">{gb.name}</TableCell>
                       <TableCell className="text-slate-600">{gb.term.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">{gb.type}</Badge>
+                        <Badge variant="outline">{GRADEBOOK_TYPE_LABELS[gb.type] ?? gb.type}</Badge>
                       </TableCell>
                       <TableCell className="text-slate-600">
-                        {gb.dueDate ? format(new Date(gb.dueDate), 'dd MMM yyyy') : '—'}
+                        {gb.dueDate ? format(new Date(gb.dueDate), 'dd MMM yyyy', { locale: fr }) : '—'}
                       </TableCell>
                       <TableCell className="text-center">{gb.maxScore}</TableCell>
                       <TableCell className="text-center">{gb._count.grades}</TableCell>
                       <TableCell className="text-right">
-                        <Link href={`/grades/${gb.id}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>View</Link>
+                        <Link href={`/grades/${gb.id}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>Consulter</Link>
                       </TableCell>
                     </TableRow>
                   ))

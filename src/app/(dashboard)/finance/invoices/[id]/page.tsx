@@ -10,7 +10,7 @@ export default async function InvoiceDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireRole(['admin'])
+  await requireRole(['admin', 'accountant'])
   const { id } = await params
 
   const settings = await db.schoolSettings.findFirst()
@@ -30,8 +30,8 @@ export default async function InvoiceDetailPage({
   const invoiceData = {
     id: invoice.id,
     status: invoice.status,
-    totalAmount: invoice.totalAmount,
-    paidAmount: invoice.paidAmount,
+    totalAmount: Number(invoice.totalAmount),
+    paidAmount: Number(invoice.paidAmount),
     dueDate: invoice.dueDate,
     issueDate: invoice.issueDate,
     notes: invoice.notes,
@@ -40,11 +40,11 @@ export default async function InvoiceDetailPage({
     items: invoice.items.map(item => ({
       id: item.id,
       description: item.description,
-      amount: item.amount,
+      amount: Number(item.amount),
     })),
     payments: invoice.payments.map(p => ({
       id: p.id,
-      amount: p.amount,
+      amount: Number(p.amount),
       method: p.method,
       reference: p.reference,
       paidAt: p.paidAt,
@@ -59,9 +59,9 @@ export default async function InvoiceDetailPage({
           className="inline-flex items-center text-sm text-slate-500 hover:text-slate-700 mb-4"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Finance
+          Retour aux finances
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Invoice Details</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Détail de la facture</h1>
       </div>
       <InvoiceDetailClient invoice={invoiceData} currencySymbol={currencySymbol} />
     </div>

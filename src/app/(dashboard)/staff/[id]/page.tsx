@@ -19,18 +19,18 @@ import AllowRepliesToggle from './allow-replies-toggle'
 type Params = Promise<{ id: string }>
 
 const LEAVE_STATUS_STYLE: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending:  { label: 'Pending',  variant: 'outline' },
-  approved: { label: 'Approved', variant: 'default' },
-  declined: { label: 'Declined', variant: 'destructive' },
+  pending:  { label: 'En attente',  variant: 'outline' },
+  approved: { label: 'Approuvée', variant: 'default' },
+  declined: { label: 'Refusée', variant: 'destructive' },
 }
 
 const LEAVE_TYPE_LABELS: Record<string, string> = {
-  annual:       'Annual Leave',
-  sick:         'Sick Leave',
-  personal:     'Personal Leave',
-  bereavement:  'Bereavement Leave',
-  unpaid:       'Unpaid Leave',
-  other:        'Other',
+  annual:       'Congé annuel',
+  sick:         'Congé maladie',
+  personal:     'Congé pour motif personnel',
+  bereavement:  'Congé pour décès d’un proche',
+  unpaid:       'Congé sans solde',
+  other:        'Autre',
 }
 
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
@@ -47,7 +47,7 @@ function daysBetween(start: Date, end: Date): number {
 }
 
 export default async function StaffDetailPage({ params }: { params: Params }) {
-  const session = await requireRole(['admin'])
+  await requireRole(['admin'])
   const { id } = await params
 
   const staff = await db.staff.findUnique({
@@ -76,7 +76,7 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-4"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back to Staff
+          Retour au personnel
         </Link>
 
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -88,7 +88,7 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold text-slate-900">{staff.user.name}</h1>
                 <Badge variant={isActive ? 'default' : 'secondary'}>
-                  {isActive ? 'Active' : 'Left'}
+                  {isActive ? 'En poste' : 'A quitté l’établissement'}
                 </Badge>
               </div>
               <p className="text-sm text-slate-500 mt-0.5">
@@ -101,7 +101,7 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
 
           <Link href={`/staff/${id}/edit`} className={buttonVariants({ variant: 'outline' })}>
             <Pencil className="w-4 h-4" />
-            Edit
+            Modifier
           </Link>
         </div>
       </div>
@@ -111,11 +111,11 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
         <TabsList>
           <TabsTrigger value="profile">
             <User className="w-4 h-4" />
-            Profile
+            Profil
           </TabsTrigger>
           <TabsTrigger value="leave">
             <CalendarDays className="w-4 h-4" />
-            Leave Requests
+            Demandes de congé
             {staff.leaveRequests.filter((l) => l.status === 'pending').length > 0 && (
               <span className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">
                 {staff.leaveRequests.filter((l) => l.status === 'pending').length}
@@ -129,46 +129,46 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Personal</CardTitle>
+                <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Informations personnelles</CardTitle>
               </CardHeader>
               <CardContent>
                 <dl>
-                  <DetailRow label="Full Name" value={staff.user.name} />
-                  <DetailRow label="Email" value={staff.user.email} />
-                  <DetailRow label="Phone" value={staff.user.phone} />
+                  <DetailRow label="Nom complet" value={staff.user.name} />
+                  <DetailRow label="Adresse e-mail" value={staff.user.email} />
+                  <DetailRow label="Téléphone" value={staff.user.phone} />
                 </dl>
               </CardContent>
             </Card>
 
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Employment</CardTitle>
+                <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Emploi</CardTitle>
               </CardHeader>
               <CardContent>
                 <dl>
-                  <DetailRow label="Employee ID" value={staff.employeeId} />
-                  <DetailRow label="Job Title" value={staff.jobTitle} />
-                  <DetailRow label="Department" value={staff.department} />
+                  <DetailRow label="Matricule" value={staff.employeeId} />
+                  <DetailRow label="Fonction" value={staff.jobTitle} />
+                  <DetailRow label="Service" value={staff.department} />
                   <DetailRow
-                    label="Employment Type"
+                    label="Type de contrat"
                     value={
-                      staff.employmentType === 'full-time' ? 'Full-time'
-                        : staff.employmentType === 'part-time' ? 'Part-time'
-                        : 'Casual'
+                      staff.employmentType === 'full-time' ? 'Temps plein'
+                        : staff.employmentType === 'part-time' ? 'Temps partiel'
+                        : 'Occasionnel'
                     }
                   />
                   <DetailRow
-                    label="Date Hired"
+                    label="Date d’embauche"
                     value={
                       staff.dateHired
-                        ? new Date(staff.dateHired).toLocaleDateString('en-NZ', { day: 'numeric', month: 'long', year: 'numeric' })
+                        ? new Date(staff.dateHired).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
                         : null
                     }
                   />
                   {staff.dateLeft && (
                     <DetailRow
-                      label="Date Left"
-                      value={new Date(staff.dateLeft).toLocaleDateString('en-NZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      label="Date de départ"
+                      value={new Date(staff.dateLeft).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     />
                   )}
                 </dl>
@@ -178,7 +178,7 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
             {staff.qualifications && (
               <Card className="border-slate-200 shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Qualifications</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Diplômes et qualifications</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-slate-700 whitespace-pre-line">{staff.qualifications}</p>
@@ -189,7 +189,7 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
             {staff.bio && (
               <Card className="border-slate-200 shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">About</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Présentation</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-slate-700 whitespace-pre-line">{staff.bio}</p>
@@ -200,7 +200,7 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
             {staff.classes.length > 0 && (
               <Card className="border-slate-200 shadow-sm lg:col-span-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Assigned Classes</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Classes attribuées</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
@@ -211,7 +211,7 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
                       >
                         <span className="font-medium text-slate-800">{cls.name}</span>
                         <span className="text-slate-400 font-mono text-xs">{cls.code}</span>
-                        {isPrimary && <Badge variant="secondary" className="text-[10px] h-4">Primary</Badge>}
+                        {isPrimary && <Badge variant="secondary" className="text-[10px] h-4">Principale</Badge>}
                       </div>
                     ))}
                   </div>
@@ -221,7 +221,7 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
             <Card className="border-slate-200 shadow-sm lg:col-span-2">
               <CardHeader className="pb-2 flex flex-row items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-slate-500" />
-                <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Messaging</CardTitle>
+                <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Messagerie</CardTitle>
               </CardHeader>
               <CardContent>
                 <AllowRepliesToggle staffId={staff.id} value={staff.allowParentReplies} />
@@ -236,7 +236,7 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
             {/* Submit new request */}
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base text-slate-800">Submit Leave Request</CardTitle>
+                <CardTitle className="text-base text-slate-800">Soumettre une demande de congé</CardTitle>
               </CardHeader>
               <CardContent>
                 <LeaveRequestForm staffId={id} />
@@ -246,11 +246,11 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
             {/* Existing requests */}
             <div>
               <h3 className="text-sm font-semibold text-slate-700 mb-3">
-                Leave History ({staff.leaveRequests.length})
+                Historique des congés ({staff.leaveRequests.length})
               </h3>
               {staff.leaveRequests.length === 0 ? (
                 <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400 shadow-sm">
-                  No leave requests have been submitted yet.
+                  Aucune demande de congé pour le moment.
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -269,30 +269,30 @@ export default async function StaffDetailPage({ params }: { params: Params }) {
                                 <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                               </div>
                               <p className="text-sm text-slate-500">
-                                {new Date(leave.startDate).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                {new Date(leave.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 {' — '}
-                                {new Date(leave.endDate).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                {new Date(leave.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 {' · '}
-                                <span className="font-medium">{days} day{days !== 1 ? 's' : ''}</span>
+                                <span className="font-medium">{days} jour{days !== 1 ? 's' : ''}</span>
                               </p>
                               {leave.reason && (
                                 <p className="text-sm text-slate-600 mt-1">{leave.reason}</p>
                               )}
                               {leave.approvedBy && (
                                 <p className="text-xs text-slate-400 mt-0.5">
-                                  {leave.status === 'approved' ? 'Approved' : 'Declined'} by {leave.approvedBy}
+                                  {leave.status === 'approved' ? 'Approuvée' : 'Refusée'} par {leave.approvedBy}
                                 </p>
                               )}
                               <p className="text-xs text-slate-400">
-                                Submitted {new Date(leave.createdAt).toLocaleDateString('en-NZ')}
+                                Soumise le {new Date(leave.createdAt).toLocaleDateString('fr-FR')}
                               </p>
                             </div>
 
                             {/* Admin approve/decline buttons for pending requests */}
                             {leave.status === 'pending' && (
                               <div className="flex items-center gap-2 shrink-0">
-                                <LeaveApproveButton leaveId={leave.id} approverName={session.name} />
-                                <LeaveDeclineButton leaveId={leave.id} approverName={session.name} />
+                                <LeaveApproveButton leaveId={leave.id} />
+                                <LeaveDeclineButton leaveId={leave.id} />
                               </div>
                             )}
                           </div>

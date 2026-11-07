@@ -6,6 +6,7 @@ import EnrollClassList from './enroll-class-list'
 export default async function PortalEnrollPage() {
   const user = await requireSession()
 
+  if (user.role === 'accountant') redirect('/finance')
   if (user.role === 'admin' || user.role === 'teacher') redirect('/classes')
 
   const activeYear = await db.academicYear.findFirst({ where: { active: true } })

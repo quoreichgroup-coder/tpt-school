@@ -1,4 +1,4 @@
-import { requireSession } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import { markMessageReadAction } from '../../actions'
@@ -13,7 +13,7 @@ export default async function MessageDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const user = await requireSession()
+  const user = await requireRole(['admin', 'teacher', 'parent', 'student'])
   const { id } = await params
 
   // Load root message (the thread root may be this id or a parent's id)

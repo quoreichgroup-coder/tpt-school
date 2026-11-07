@@ -114,16 +114,16 @@ export async function signIn(
   const user = await db.user.findUnique({ where: { email: email.toLowerCase() } });
 
   if (!user || !user.passwordHash) {
-    return { success: false, error: "Invalid email or password" };
+    return { success: false, error: "Adresse e-mail ou mot de passe incorrect." };
   }
 
   if (!user.active) {
-    return { success: false, error: "Account is inactive" };
+    return { success: false, error: "Ce compte est désactivé." };
   }
 
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
-    return { success: false, error: "Invalid email or password" };
+    return { success: false, error: "Adresse e-mail ou mot de passe incorrect." };
   }
 
   const token = await createSession(user.id);

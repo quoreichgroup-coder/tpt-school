@@ -97,7 +97,7 @@ export default function InvoiceForm({ students, feeTypes, currencySymbol }: Prop
   return (
     <Card className="max-w-3xl">
       <CardHeader>
-        <CardTitle>New Invoice</CardTitle>
+        <CardTitle>Nouvelle facture</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -110,10 +110,10 @@ export default function InvoiceForm({ students, feeTypes, currencySymbol }: Prop
           {/* Student + Due Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>Student *</Label>
+              <Label>Élève *</Label>
               <Select value={studentId} onValueChange={(v) => { if (v !== null) setStudentId(v) }} required>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a student..." />
+                  <SelectValue placeholder="Sélectionner un élève…" />
                 </SelectTrigger>
                 <SelectContent>
                   {students.map(s => (
@@ -126,23 +126,23 @@ export default function InvoiceForm({ students, feeTypes, currencySymbol }: Prop
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="dueDate">Due Date *</Label>
+              <Label htmlFor="dueDate">Date d’échéance *</Label>
               <Input id="dueDate" name="dueDate" type="date" required />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Textarea id="notes" name="notes" rows={2} placeholder="Any additional notes..." />
+            <Label htmlFor="notes">Notes (facultatif)</Label>
+            <Textarea id="notes" name="notes" rows={2} placeholder="Informations complémentaires…" />
           </div>
 
           {/* Line Items */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Line Items</Label>
+              <Label className="text-base font-semibold">Lignes de facture</Label>
               <Button type="button" variant="outline" size="sm" onClick={addItem}>
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Add Item
+                Ajouter une ligne
               </Button>
             </div>
 
@@ -159,16 +159,16 @@ export default function InvoiceForm({ students, feeTypes, currencySymbol }: Prop
                     />
                   </div>
                   <div className="col-span-3 space-y-1">
-                    {i === 0 && <Label className="text-xs text-slate-500">Fee Type</Label>}
+                    {i === 0 && <Label className="text-xs text-slate-500">Type de frais</Label>}
                     <Select
                       value={item.feeTypeId}
                       onValueChange={v => updateItem(i, 'feeTypeId', v ?? '')}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="None" />
+                        <SelectValue placeholder="Aucun" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="">Aucun</SelectItem>
                         {feeTypes.map(ft => (
                           <SelectItem key={ft.id} value={ft.id}>
                             {ft.name}
@@ -178,7 +178,7 @@ export default function InvoiceForm({ students, feeTypes, currencySymbol }: Prop
                     </Select>
                   </div>
                   <div className="col-span-3 space-y-1">
-                    {i === 0 && <Label className="text-xs text-slate-500">Amount ({currencySymbol})</Label>}
+                    {i === 0 && <Label className="text-xs text-slate-500">Montant ({currencySymbol})</Label>}
                     <Input
                       type="number"
                       step="0.01"
@@ -219,7 +219,7 @@ export default function InvoiceForm({ students, feeTypes, currencySymbol }: Prop
 
           <div className="flex gap-3 pt-2">
             <Button type="submit" disabled={isPending || !studentId}>
-              {isPending ? 'Creating...' : 'Create Invoice'}
+              {isPending ? 'Création…' : 'Créer la facture'}
             </Button>
             <Button
               type="button"
@@ -227,7 +227,7 @@ export default function InvoiceForm({ students, feeTypes, currencySymbol }: Prop
               onClick={() => router.back()}
               disabled={isPending}
             >
-              Cancel
+              Annuler
             </Button>
           </div>
         </form>

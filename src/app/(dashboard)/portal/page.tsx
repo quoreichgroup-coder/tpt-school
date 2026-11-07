@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { GraduationCap, CalendarCheck, Award, Bell, DollarSign, ClipboardList, ScanLine, Mail } from 'lucide-react'
+import { GraduationCap, CalendarCheck, Award, Bell, DollarSign, ClipboardList, ScanLine, Mail, FileText } from 'lucide-react'
 
 function StatCard({
   title,
@@ -37,6 +37,7 @@ function StatCard({
 export default async function PortalPage() {
   const user = await requireSession()
 
+  if (user.role === 'accountant') redirect('/finance')
   // Admin and teachers go to their own dashboard
   if (user.role === 'admin' || user.role === 'teacher') {
     redirect('/dashboard')
@@ -194,6 +195,9 @@ export default async function PortalPage() {
           >
             View messages →
           </Link>
+          <Link href="/portal/academics" className="text-sm text-primary font-medium hover:underline">
+            Academics and report cards →
+          </Link>
         </div>
       </div>
     )
@@ -344,6 +348,13 @@ export default async function PortalPage() {
         >
           <Mail className="w-5 h-5 text-primary shrink-0" />
           <span className="text-sm font-medium text-slate-700">Messages</span>
+        </Link>
+        <Link
+          href="/portal/academics"
+          className="flex items-center gap-3 bg-white border border-slate-200 hover:border-violet-300 hover:bg-violet-50 rounded-xl px-4 py-3 transition-colors"
+        >
+          <FileText className="w-5 h-5 text-violet-600 shrink-0" />
+          <span className="text-sm font-medium text-slate-700">Academics and Report Cards</span>
         </Link>
       </div>
     </div>

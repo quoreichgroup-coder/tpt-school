@@ -1,19 +1,15 @@
 import 'dotenv/config'
 import bcrypt from 'bcryptjs'
-import path from 'node:path'
 import { PrismaClient } from '../src/generated/prisma/client'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 const ADMIN_EMAIL = 'admin@school.ac.nz'
 const ADMIN_PASSWORD = 'Admin1234!'
 const DEMO_PASSWORD = 'Demo1234!'
 
 function createDb(): PrismaClient {
-  const dbUrl = process.env.DATABASE_URL ?? 'file:./dev.db'
-  const dbPath = dbUrl.replace(/^file:/, '')
-  const resolvedPath = path.isAbsolute(dbPath) ? dbPath : path.join(process.cwd(), dbPath)
-  const adapter = new PrismaBetterSqlite3({ url: resolvedPath })
-  return new (PrismaClient as any)({ adapter }) as PrismaClient
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required')
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) })
 }
 
 async function main() {
@@ -25,8 +21,8 @@ async function main() {
     if (!settings) {
       await db.schoolSettings.create({
         data: {
-          name: 'TPT School',
-          shortName: 'TPT',
+          name: 'QSCHOOL',
+          shortName: 'QS',
           schoolType: 'both',
           currentYear: new Date().getFullYear(),
           setupComplete: true,

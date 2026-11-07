@@ -8,12 +8,14 @@ test.describe('Staff module', () => {
 
   test('navigates to staff list', async ({ page }) => {
     await page.goto('/staff')
-    await expect(page.getByRole('heading', { name: /staff/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /personnel|staff/i })).toBeVisible()
   })
 
   test('new staff form renders', async ({ page }) => {
     await page.goto('/staff/new')
-    await expect(page.getByLabel(/Full Name/i)).toBeVisible()
-    await expect(page.getByLabel(/Email/i)).toBeVisible()
+    await expect(page.getByRole('heading', { name: /ajouter un membre du personnel|add staff member/i })).toBeVisible()
+    await expect(page.getByLabel(/Prénom|First Name/i)).toBeVisible()
+    await expect(page.getByLabel(/^Nom\b|Last Name/i)).toBeVisible()
+    await expect(page.getByLabel(/Adresse e-mail|Email Address/i)).toBeVisible()
   })
 })

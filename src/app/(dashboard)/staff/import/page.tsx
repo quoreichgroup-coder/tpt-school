@@ -13,11 +13,11 @@ export default async function StaffImportPage() {
           className="inline-flex items-center text-sm text-slate-500 hover:text-slate-700 mb-4"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Staff
+          Retour au personnel
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Import Staff</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Importer le personnel</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          Upload a CSV file to bulk-create staff accounts.
+          Importez un fichier CSV pour créer plusieurs comptes du personnel.
         </p>
       </div>
       <StaffImportClient />

@@ -26,11 +26,11 @@ export default async function EditStaffPage({ params }: { params: Params }) {
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-4"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back to Staff Profile
+          Retour au dossier du membre
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Edit Staff Member</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Modifier le membre du personnel</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Updating details for <span className="font-medium text-slate-700">{staff.user.name}</span>
+          Modification du dossier de <span className="font-medium text-slate-700">{staff.user.name}</span>
         </p>
       </div>
 

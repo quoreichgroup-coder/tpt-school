@@ -16,10 +16,10 @@ test.describe('Setup wizard + login', () => {
 
   test('login page rejects wrong password', async ({ page }) => {
     await page.goto('/login')
-    await page.getByLabel('Email address').fill(TEST_ADMIN.email)
-    await page.getByLabel('Password').fill('wrongpassword')
-    await page.getByRole('button', { name: 'Sign in' }).click()
-    await expect(page.locator('text=/invalid|incorrect|failed/i')).toBeVisible({ timeout: 5_000 })
+    await page.getByLabel(/adresse e-mail|email address/i).fill(TEST_ADMIN.email)
+    await page.getByLabel(/mot de passe|password/i).fill('wrongpassword')
+    await page.getByRole('button', { name: /se connecter|sign in/i }).click()
+    await expect(page.locator('text=/invalide|incorrect|échec|invalid|failed/i')).toBeVisible({ timeout: 5_000 })
     await expect(page).toHaveURL(/\/login/)
   })
 
@@ -30,14 +30,14 @@ test.describe('Setup wizard + login', () => {
 
   test('logs in as admin and sees dashboard', async ({ page }) => {
     await loginAsAdmin(page)
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: TEST_ADMIN.name, exact: true })).toBeVisible()
   })
 
   test('signs out', async ({ page }) => {
     await loginAsAdmin(page)
     // Find and click sign-out (button or menu item)
-    const signOut = page.getByRole('button', { name: /sign out|log out/i })
-    await signOut.click()
+    await page.getByRole('button', { name: /e2e admin/i }).click()
+    await page.getByRole('menuitem', { name: /déconnexion|sign out|log out/i }).click()
     await page.waitForURL(/\/login/, { timeout: 5_000 })
     await expect(page).toHaveURL(/\/login/)
   })

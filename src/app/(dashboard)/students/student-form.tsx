@@ -130,7 +130,7 @@ export default function StudentForm({ student }: Props) {
         : await createStudentAction(fd)
 
       if (result && !result.success) {
-        setError(result.error ?? 'Something went wrong.')
+        setError(result.error ?? 'Une erreur est survenue.')
       } else if (result && result.success && !isEdit && 'tempPassword' in result && result.tempPassword && 'id' in result && result.id) {
         setCreatedPassword({ id: result.id as string, password: result.tempPassword as string })
       } else if (result && result.success && isEdit) {
@@ -144,27 +144,27 @@ export default function StudentForm({ student }: Props) {
       <div className="max-w-md mx-auto mt-16">
         <Card className="border-emerald-200 shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-base text-slate-800">Student Created</CardTitle>
+            <CardTitle className="text-base text-slate-800">Élève créé</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-slate-600">
-              The student account has been created. Share the temporary password with the student — it is only shown once.
+              Le compte élève a été créé. Communiquez-lui le mot de passe temporaire, affiché une seule fois.
             </p>
             <div className="rounded-md bg-slate-50 border border-slate-200 px-4 py-3">
-              <p className="text-xs text-slate-500 mb-1">Temporary password</p>
+              <p className="text-xs text-slate-500 mb-1">Mot de passe temporaire</p>
               <p className="font-mono text-lg font-bold tracking-wider text-slate-800 select-all">
                 {createdPassword.password}
               </p>
             </div>
             <p className="text-xs text-amber-600 font-medium">
-              The student must change this password after first login.
+              L’élève devra modifier ce mot de passe lors de sa première connexion.
             </p>
             <Button
               type="button"
               className="w-full"
               onClick={() => router.push(`/students/${createdPassword.id}`)}
             >
-              Go to Student Profile
+              Ouvrir le dossier de l’élève
             </Button>
           </CardContent>
         </Card>
@@ -184,33 +184,33 @@ export default function StudentForm({ student }: Props) {
       {/* Personal Details */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base text-slate-800">Personal Details</CardTitle>
+          <CardTitle className="text-base text-slate-800">Informations personnelles</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="firstName">First Name <span className="text-destructive">*</span></Label>
+            <Label htmlFor="firstName">Prénom <span className="text-destructive">*</span></Label>
             <Input
               id="firstName"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="e.g. James"
+              placeholder="Ex. : Amadou"
               required
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="lastName">Last Name <span className="text-destructive">*</span></Label>
+            <Label htmlFor="lastName">Nom <span className="text-destructive">*</span></Label>
             <Input
               id="lastName"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              placeholder="e.g. Smith"
+              placeholder="Ex. : Diallo"
               required
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email Address <span className="text-destructive">*</span></Label>
+            <Label htmlFor="email">Adresse e-mail <span className="text-destructive">*</span></Label>
             <Input
               id="email"
               type="email"
@@ -222,18 +222,18 @@ export default function StudentForm({ student }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone">Téléphone</Label>
             <Input
               id="phone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. 021 123 4567"
+              placeholder="Ex. : +224 600 00 00 00"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <Label htmlFor="dateOfBirth">Date de naissance</Label>
             <Input
               id="dateOfBirth"
               type="date"
@@ -243,37 +243,37 @@ export default function StudentForm({ student }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="gender">Gender</Label>
+            <Label htmlFor="gender">Genre</Label>
             <Select value={gender} onValueChange={(v) => { if (v !== null) setGender(v) }}>
               <SelectTrigger id="gender" className="w-full">
-                <SelectValue placeholder="Select gender" />
+              <SelectValue placeholder="Sélectionner un genre" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-                <SelectItem value="prefer not to say">Prefer not to say</SelectItem>
+                <SelectItem value="male">Masculin</SelectItem>
+                <SelectItem value="female">Féminin</SelectItem>
+                <SelectItem value="other">Autre</SelectItem>
+                <SelectItem value="prefer not to say">Préfère ne pas répondre</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="nationality">Nationality</Label>
+            <Label htmlFor="nationality">Nationalité</Label>
             <Input
               id="nationality"
               value={nationality}
               onChange={(e) => setNationality(e.target.value)}
-              placeholder="e.g. New Zealand"
+              placeholder="Ex. : Guinéenne"
             />
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="address">Home Address</Label>
+            <Label htmlFor="address">Adresse du domicile</Label>
             <Input
               id="address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="123 Example Street, Auckland"
+              placeholder="Quartier, commune, ville"
             />
           </div>
         </CardContent>
@@ -282,19 +282,19 @@ export default function StudentForm({ student }: Props) {
       {/* Enrolment Details */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base text-slate-800">Enrolment Details</CardTitle>
+          <CardTitle className="text-base text-slate-800">Informations de scolarité</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="yearLevel">Year Level</Label>
+            <Label htmlFor="yearLevel">Niveau scolaire</Label>
             <Select value={yearLevel} onValueChange={(v) => { if (v !== null) setYearLevel(v) }}>
               <SelectTrigger id="yearLevel" className="w-full">
-                <SelectValue placeholder="Select year level" />
+                <SelectValue placeholder="Sélectionner un niveau" />
               </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: 13 }, (_, i) => i + 1).map((yr) => (
                   <SelectItem key={yr} value={String(yr)}>
-                    Year {yr}
+                    Niveau {yr}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -302,22 +302,22 @@ export default function StudentForm({ student }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="enrollmentStatus">Enrolment Status</Label>
+            <Label htmlFor="enrollmentStatus">Statut de scolarité</Label>
             <Select value={enrollmentStatus} onValueChange={(v) => { if (v !== null) setEnrollmentStatus(v) }}>
               <SelectTrigger id="enrollmentStatus" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="graduated">Graduated</SelectItem>
-                <SelectItem value="transferred">Transferred</SelectItem>
+                <SelectItem value="active">Inscrit</SelectItem>
+                <SelectItem value="inactive">Inactif</SelectItem>
+                <SelectItem value="graduated">Diplômé</SelectItem>
+                <SelectItem value="transferred">Transféré</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="enrollmentDate">Enrolment Date</Label>
+            <Label htmlFor="enrollmentDate">Date d’inscription</Label>
             <Input
               id="enrollmentDate"
               type="date"
@@ -331,37 +331,37 @@ export default function StudentForm({ student }: Props) {
       {/* Emergency Contact */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base text-slate-800">Emergency Contact</CardTitle>
+          <CardTitle className="text-base text-slate-800">Contact d’urgence</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="emergencyName">Contact Name</Label>
+            <Label htmlFor="emergencyName">Nom du contact</Label>
             <Input
               id="emergencyName"
               value={emergencyName}
               onChange={(e) => setEmergencyName(e.target.value)}
-              placeholder="e.g. Sarah Smith"
+              placeholder="Ex. : Aïssatou Diallo"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emergencyRelation">Relationship</Label>
+            <Label htmlFor="emergencyRelation">Lien avec l’élève</Label>
             <Input
               id="emergencyRelation"
               value={emergencyRelation}
               onChange={(e) => setEmergencyRelation(e.target.value)}
-              placeholder="e.g. Mother"
+              placeholder="Ex. : Mère"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emergencyPhone">Contact Phone</Label>
+            <Label htmlFor="emergencyPhone">Téléphone du contact</Label>
             <Input
               id="emergencyPhone"
               type="tel"
               value={emergencyPhone}
               onChange={(e) => setEmergencyPhone(e.target.value)}
-              placeholder="e.g. 021 987 6543"
+              placeholder="Ex. : +224 600 00 00 00"
             />
           </div>
         </CardContent>
@@ -374,7 +374,7 @@ export default function StudentForm({ student }: Props) {
           onClick={() => setMedicalOpen((o) => !o)}
           className="flex items-center justify-between w-full px-6 py-4 text-left"
         >
-          <span className="text-base font-semibold text-slate-800">Medical Information</span>
+          <span className="text-base font-semibold text-slate-800">Informations médicales</span>
           {medicalOpen ? (
             <ChevronUp className="w-4 h-4 text-slate-400" />
           ) : (
@@ -385,12 +385,12 @@ export default function StudentForm({ student }: Props) {
         {medicalOpen && (
           <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="medicalConditions">Medical Conditions</Label>
+              <Label htmlFor="medicalConditions">Antécédents médicaux</Label>
               <Textarea
                 id="medicalConditions"
                 value={medicalConditions}
                 onChange={(e) => setMedicalConditions(e.target.value)}
-                placeholder="List any known medical conditions…"
+                placeholder="Indiquez les problèmes de santé connus…"
                 rows={3}
               />
             </div>
@@ -401,40 +401,40 @@ export default function StudentForm({ student }: Props) {
                 id="allergies"
                 value={allergies}
                 onChange={(e) => setAllergies(e.target.value)}
-                placeholder="List any allergies (food, medication, environmental)…"
+                placeholder="Précisez les allergies alimentaires, médicamenteuses ou environnementales…"
                 rows={2}
               />
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="medications">Current Medications</Label>
+              <Label htmlFor="medications">Traitements en cours</Label>
               <Textarea
                 id="medications"
                 value={medications}
                 onChange={(e) => setMedications(e.target.value)}
-                placeholder="List any current medications and dosages…"
+                placeholder="Indiquez les traitements et leurs posologies…"
                 rows={2}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="doctorName">Doctor / GP Name</Label>
+              <Label htmlFor="doctorName">Nom du médecin</Label>
               <Input
                 id="doctorName"
                 value={doctorName}
                 onChange={(e) => setDoctorName(e.target.value)}
-                placeholder="e.g. Dr. Jane Brown"
+                placeholder="Ex. : Dr Camara"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="doctorPhone">Doctor / GP Phone</Label>
+              <Label htmlFor="doctorPhone">Téléphone du médecin</Label>
               <Input
                 id="doctorPhone"
                 type="tel"
                 value={doctorPhone}
                 onChange={(e) => setDoctorPhone(e.target.value)}
-                placeholder="e.g. 09 123 4567"
+                placeholder="Ex. : +224 600 00 00 00"
               />
             </div>
           </div>
@@ -445,7 +445,7 @@ export default function StudentForm({ student }: Props) {
       <div className="flex items-center gap-3 pt-2">
         <Button type="submit" disabled={isPending} size="lg">
           {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isEdit ? 'Save Changes' : 'Enrol Student'}
+          {isEdit ? 'Enregistrer les modifications' : 'Inscrire l’élève'}
         </Button>
         <Button
           type="button"
@@ -454,7 +454,7 @@ export default function StudentForm({ student }: Props) {
           onClick={() => router.back()}
           disabled={isPending}
         >
-          Cancel
+          Annuler
         </Button>
       </div>
     </form>

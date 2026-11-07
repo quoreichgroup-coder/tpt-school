@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ─── Auth & Users ────────────────────────────────────────────────────────────
@@ -14,7 +14,7 @@ model User {
   email        String   @unique
   passwordHash String?
   name         String
-  role         String   // admin | teacher | parent | student
+  role         String   // admin | accountant | teacher | parent | student
   avatar       String?
   phone        String?
   active       Boolean  @default(true)
@@ -36,6 +36,10 @@ model User {
   authoredNotes        StudentNote[]
   createdEnrolRequests EnrolmentRequest[]  @relation("RequestedBy")
   reviewedEnrolRequests EnrolmentRequest[] @relation("ReviewedBy")
+  reviewedReportCards   ReportCard[]        @relation("ReportCardReviewer")
+  reportCardRevisions   ReportCardRevision[] @relation("ReportCardRevisionActor")
+  mobileSessions        MobileSession[]
+  createdExams          Exam[]              @relation("ExamCreatedBy")
 }
 
 model Session {
@@ -44,6 +48,18 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MobileSession {
+  id               String    @id @default(cuid())
+  userId           String
+  refreshTokenHash String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model VerificationToken {
@@ -119,6 +135,7 @@ model Term {
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
   attendances    Attendance[]
   gradebooks     Gradebook[]
+  exams          Exam[]
 
   @@unique([academicYearId, termNumber])
 }
@@ -143,6 +160,7 @@ model Staff {
   classes                 ClassTeacher[]
   timetableSlots          TimetableSlot[]
   timetableRequirements   TimetableRequirement[]
+  invigilatedExams        Exam[]                @relation("ExamInvigilator")
   leaveRequests           LeaveRequest[]
   attendance              StaffAttendance[]
 }
@@ -214,6 +232,7 @@ model Student {
   suspensions         Suspension[]
   truancyAlerts       TruancyAlert[]
   notes               StudentNote[]
+  reportCards         ReportCard[]
   waitlistEntries     WaitlistEntry[]
   enrolmentRequests   EnrolmentRequest[]
 }
@@ -317,6 +336,7 @@ model Class {
   waitlistEntries   WaitlistEntry[]
   enrolmentRequests EnrolmentRequest[]
   timetableRequirements TimetableRequirement[]
+  exams                  Exam[]
 
   @@unique([academicYearId, code])
 }
@@ -355,6 +375,7 @@ model Room {
   classes                  Class[]
   timetableSlots           TimetableSlot[]
   timetableRequirements    TimetableRequirement[]
+  exams                    Exam[]
 }
 
 model TimetableSlot {
@@ -421,6 +442,35 @@ model Gradebook {
   class       Class     @relation(fields: [classId], references: [id])
   term        Term      @relation(fields: [termId], references: [id])
   grades      Grade[]
+  exam        Exam?
+}
+
+model Exam {
+  id            String   @id @default(cuid())
+  classId       String
+  termId        String
+  title         String
+  startsAt      DateTime
+  endsAt        DateTime
+  roomId        String?
+  invigilatorId String?
+  status        String   @default("draft") // draft | published | cancelled
+  notes         String?
+  createdById   String
+  gradebookId   String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  schoolClass   Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  term          Term     @relation(fields: [termId], references: [id], onDelete: Cascade)
+  room          Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  invigilator   Staff?   @relation("ExamInvigilator", fields: [invigilatorId], references: [id], onDelete: SetNull)
+  createdBy     User     @relation("ExamCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  gradebook     Gradebook? @relation(fields: [gradebookId], references: [id], onDelete: SetNull)
+
+  @@index([classId, startsAt])
+  @@index([termId, status, startsAt])
+  @@index([roomId, startsAt])
+  @@index([invigilatorId, startsAt])
 }
 
 model Grade {
@@ -450,11 +500,36 @@ model ReportCard {
   principalNotes String?
   issuedAt       DateTime?
   published      Boolean   @default(false)
+  approvalStatus String    @default("draft") // draft | pending_approval | approved | rejected
+  reviewedAt     DateTime?
+  reviewedById   String?
+  rejectionReason String?
   pdfPath        String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  student        Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reviewer       User?     @relation("ReportCardReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  revisions      ReportCardRevision[]
 
   @@unique([studentId, termId])
+}
+
+model ReportCardRevision {
+  id              String     @id @default(cuid())
+  reportCardId    String
+  actorId         String
+  action          String
+  academicYear    Int
+  comments        String?
+  teacherNotes    String?
+  principalNotes  String?
+  approvalStatus  String
+  rejectionReason String?
+  createdAt       DateTime   @default(now())
+  reportCard      ReportCard @relation(fields: [reportCardId], references: [id], onDelete: Cascade)
+  actor           User       @relation("ReportCardRevisionActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([reportCardId, createdAt])
 }
 
 // ─── Communication ───────────────────────────────────────────────────────────
@@ -555,7 +630,7 @@ model FeeType {
   id           String           @id @default(cuid())
   name         String
   description  String?
-  amount       Float
+  amount       Decimal          @db.Decimal(14, 2)
   frequency    String           @default("annual")
   yearLevel    Int?
   active       Boolean          @default(true)
@@ -569,8 +644,8 @@ model FeeInvoice {
   dueDate     DateTime
   status      String           @default("unpaid")
   notes       String?
-  totalAmount Float
-  paidAmount  Float            @default(0)
+  totalAmount Decimal          @db.Decimal(14, 2)
+  paidAmount  Decimal          @default(0) @db.Decimal(14, 2)
   lastReminderSentAt DateTime?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
@@ -584,7 +659,7 @@ model FeeInvoiceItem {
   invoiceId   String
   feeTypeId   String?
   description String
-  amount      Float
+  amount      Decimal    @db.Decimal(14, 2)
   invoice     FeeInvoice @relation(fields: [invoiceId], references: [id])
   feeType     FeeType?   @relation(fields: [feeTypeId], references: [id])
 }
@@ -592,7 +667,7 @@ model FeeInvoiceItem {
 model FeePayment {
   id         String     @id @default(cuid())
   invoiceId  String
-  amount     Float
+  amount     Decimal    @db.Decimal(14, 2)
   method     String     @default("cash")
   reference  String?
   paidAt     DateTime   @default(now())

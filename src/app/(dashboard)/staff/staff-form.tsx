@@ -32,6 +32,7 @@ type StaffData = {
     name: string
     email: string
     phone: string | null
+    role: string
   }
 }
 
@@ -70,6 +71,7 @@ export default function StaffForm({ staff }: Props) {
   const [lastName, setLastName] = useState(initialLast)
   const [email, setEmail] = useState(staff?.user.email ?? '')
   const [phone, setPhone] = useState(staff?.user.phone ?? '')
+  const [accountRole, setAccountRole] = useState(staff?.user.role === 'accountant' ? 'accountant' : 'teacher')
   const [jobTitle, setJobTitle] = useState(staff?.jobTitle ?? '')
   const [department, setDepartment] = useState(staff?.department ?? '')
   const [employmentType, setEmploymentType] = useState(staff?.employmentType ?? 'full-time')
@@ -86,6 +88,7 @@ export default function StaffForm({ staff }: Props) {
     fd.set('lastName', lastName)
     fd.set('email', email)
     fd.set('phone', phone)
+    fd.set('accountRole', accountRole)
     fd.set('jobTitle', jobTitle)
     fd.set('department', department)
     fd.set('employmentType', employmentType)
@@ -99,7 +102,7 @@ export default function StaffForm({ staff }: Props) {
         : await createStaffAction(fd)
 
       if (result && !result.success) {
-        setError(result.error ?? 'Something went wrong.')
+        setError(result.error ?? 'Une erreur est survenue.')
       } else if (result && result.success && !isEdit && 'tempPassword' in result && result.tempPassword && 'id' in result && result.id) {
         setCreatedPassword({ id: result.id as string, password: result.tempPassword as string })
       } else if (result && result.success && isEdit) {
@@ -113,27 +116,27 @@ export default function StaffForm({ staff }: Props) {
       <div className="max-w-md mx-auto mt-16">
         <Card className="border-emerald-200 shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-base text-slate-800">Staff Member Created</CardTitle>
+            <CardTitle className="text-base text-slate-800">Membre du personnel créé</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-slate-600">
-              The staff account has been created. Share the temporary password — it is only shown once.
+              Le compte du membre a été créé. Communiquez-lui le mot de passe temporaire, affiché une seule fois.
             </p>
             <div className="rounded-md bg-slate-50 border border-slate-200 px-4 py-3">
-              <p className="text-xs text-slate-500 mb-1">Temporary password</p>
+              <p className="text-xs text-slate-500 mb-1">Mot de passe temporaire</p>
               <p className="font-mono text-lg font-bold tracking-wider text-slate-800 select-all">
                 {createdPassword.password}
               </p>
             </div>
             <p className="text-xs text-amber-600 font-medium">
-              Staff must change this password after first login.
+              Le mot de passe devra être modifié lors de la première connexion.
             </p>
             <Button
               type="button"
               className="w-full"
               onClick={() => router.push(`/staff/${createdPassword.id}`)}
             >
-              Go to Staff Profile
+              Ouvrir le dossier du membre
             </Button>
           </CardContent>
         </Card>
@@ -153,51 +156,51 @@ export default function StaffForm({ staff }: Props) {
       {/* Personal Details */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base text-slate-800">Personal Details</CardTitle>
+          <CardTitle className="text-base text-slate-800">Informations personnelles</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="firstName">First Name <span className="text-destructive">*</span></Label>
+            <Label htmlFor="firstName">Prénom <span className="text-destructive">*</span></Label>
             <Input
               id="firstName"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="e.g. Sarah"
+              placeholder="Ex. : Aïssatou"
               required
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="lastName">Last Name <span className="text-destructive">*</span></Label>
+            <Label htmlFor="lastName">Nom <span className="text-destructive">*</span></Label>
             <Input
               id="lastName"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              placeholder="e.g. Johnson"
+              placeholder="Ex. : Diallo"
               required
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email Address <span className="text-destructive">*</span></Label>
+            <Label htmlFor="email">Adresse e-mail <span className="text-destructive">*</span></Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="staff@school.ac.nz"
+              placeholder="personnel@ecole.org"
               required
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone">Téléphone</Label>
             <Input
               id="phone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. 021 123 4567"
+              placeholder="Ex. : +224 600 00 00 00"
             />
           </div>
         </CardContent>
@@ -206,45 +209,59 @@ export default function StaffForm({ staff }: Props) {
       {/* Employment Details */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base text-slate-800">Employment Details</CardTitle>
+          <CardTitle className="text-base text-slate-800">Informations professionnelles</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="jobTitle">Job Title</Label>
+            <Label htmlFor="jobTitle">Fonction</Label>
             <Input
               id="jobTitle"
               value={jobTitle}
               onChange={(e) => setJobTitle(e.target.value)}
-              placeholder="e.g. Senior Teacher"
+              placeholder="Ex. : Enseignant principal"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="department">Department</Label>
+            <Label htmlFor="department">Service</Label>
             <Input
               id="department"
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
-              placeholder="e.g. Mathematics"
+              placeholder="Ex. : Mathématiques"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="employmentType">Employment Type</Label>
+            <Label htmlFor="employmentType">Type de contrat</Label>
             <Select value={employmentType} onValueChange={(v) => { if (v !== null) setEmploymentType(v) }}>
               <SelectTrigger id="employmentType" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="full-time">Full-time</SelectItem>
-                <SelectItem value="part-time">Part-time</SelectItem>
-                <SelectItem value="casual">Casual</SelectItem>
+                <SelectItem value="full-time">Temps plein</SelectItem>
+                <SelectItem value="part-time">Temps partiel</SelectItem>
+                <SelectItem value="casual">Occasionnel</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="dateHired">Date Hired</Label>
+            <Label htmlFor="accountRole">Rôle du compte</Label>
+            <Select value={accountRole} onValueChange={(value) => { if (value !== null) setAccountRole(value) }}>
+              <SelectTrigger id="accountRole" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="teacher">Enseignant</SelectItem>
+                <SelectItem value="accountant">Comptable — finances uniquement</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500">Le comptable gère les factures, paiements et types de frais, sans accès à l’administration de l’établissement.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="dateHired">Date d’embauche</Label>
             <Input
               id="dateHired"
               type="date"
@@ -254,23 +271,23 @@ export default function StaffForm({ staff }: Props) {
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="qualifications">Qualifications</Label>
+            <Label htmlFor="qualifications">Diplômes et qualifications</Label>
             <Textarea
               id="qualifications"
               value={qualifications}
               onChange={(e) => setQualifications(e.target.value)}
-              placeholder="e.g. Bachelor of Education, NZQA Level 7…"
+              placeholder="Ex. : Licence en sciences de l’éducation…"
               rows={2}
             />
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="bio">Bio / About</Label>
+            <Label htmlFor="bio">Présentation</Label>
             <Textarea
               id="bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="A brief introduction about this staff member…"
+              placeholder="Courte présentation du membre du personnel…"
               rows={4}
             />
           </div>
@@ -281,7 +298,7 @@ export default function StaffForm({ staff }: Props) {
       <div className="flex items-center gap-3 pt-2">
         <Button type="submit" disabled={isPending} size="lg">
           {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isEdit ? 'Save Changes' : 'Add Staff Member'}
+          {isEdit ? 'Enregistrer les modifications' : 'Ajouter le membre'}
         </Button>
         <Button
           type="button"
@@ -290,7 +307,7 @@ export default function StaffForm({ staff }: Props) {
           onClick={() => router.back()}
           disabled={isPending}
         >
-          Cancel
+          Annuler
         </Button>
       </div>
     </form>

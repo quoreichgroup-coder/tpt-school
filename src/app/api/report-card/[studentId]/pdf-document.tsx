@@ -5,6 +5,7 @@ import {
   Text,
   StyleSheet,
 } from '@react-pdf/renderer'
+import type { ComponentProps, ReactElement } from 'react'
 
 // Built-in PDF fonts are registered automatically; no external font load needed
 
@@ -37,6 +38,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Helvetica-Bold',
     marginTop: 6,
+  },
+  reportComments: {
+    fontSize: 9,
+    lineHeight: 1.5,
+    color: '#334155',
+    padding: 10,
+    borderRadius: 4,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   // Student info row
   infoRow: {
@@ -190,6 +201,8 @@ type ClassSummary = {
 }
 
 type Props = {
+  period?: string
+  comments?: string | null
   student: {
     name: string
     studentId: string
@@ -221,7 +234,7 @@ function scoreColor(score: number | null, max: number): string {
   return '#dc2626'
 }
 
-export function ReportCardDocument({ student, school, attendance, classSummaries, generatedAt }: Props) {
+export function ReportCardDocument({ student, school, attendance, classSummaries, generatedAt, period, comments }: Props): ReactElement<ComponentProps<typeof Document>> {
   return (
     <Document title={`Report Card — ${student.name}`} author={school.name}>
       <Page size="A4" style={styles.page}>
@@ -234,7 +247,7 @@ export function ReportCardDocument({ student, school, attendance, classSummaries
               {[school.address, school.phone].filter(Boolean).join(' · ')}
             </Text>
           )}
-          <Text style={styles.reportTitle}>Student Report Card</Text>
+          <Text style={styles.reportTitle}>Student Report Card{period ? ` — ${period}` : ''}</Text>
         </View>
 
         {/* Student Info */}
@@ -330,6 +343,13 @@ export function ReportCardDocument({ student, school, attendance, classSummaries
               )}
             </View>
           ))
+        )}
+
+        {comments && (
+          <>
+            <Text style={styles.sectionTitle}>General Comment</Text>
+            <Text style={styles.reportComments}>{comments}</Text>
+          </>
         )}
 
         {/* Footer */}

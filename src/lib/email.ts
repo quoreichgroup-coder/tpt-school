@@ -8,6 +8,8 @@ export type EmailPayload = {
   text?: string
 }
 
+type SchoolEmailSettings = NonNullable<Awaited<ReturnType<typeof db.schoolSettings.findFirst>>>
+
 export async function sendEmail(
   payload: EmailPayload,
 ): Promise<{ success: boolean; error?: string }> {
@@ -58,7 +60,7 @@ export async function sendEmail(
   return result
 }
 
-async function sendViaSmtp(payload: EmailPayload, settings: any) {
+async function sendViaSmtp(payload: EmailPayload, settings: SchoolEmailSettings) {
   if (!settings.smtpHost) return { success: false, error: 'SMTP not configured.' }
   const nodemailer = await import('nodemailer')
   const smtpPass = decrypt(settings.smtpPass ?? '')
@@ -77,7 +79,7 @@ async function sendViaSmtp(payload: EmailPayload, settings: any) {
   return { success: true }
 }
 
-async function sendViaResend(payload: EmailPayload, apiKey: string, settings: any) {
+async function sendViaResend(payload: EmailPayload, apiKey: string, settings: SchoolEmailSettings) {
   if (!apiKey) return { success: false, error: 'Resend API key not configured.' }
   const fromAddress = settings.smtpFrom ?? `noreply@${settings.email?.split('@')[1] ?? 'school.com'}`
   const res = await fetch('https://api.resend.com/emails', {
@@ -92,7 +94,7 @@ async function sendViaResend(payload: EmailPayload, apiKey: string, settings: an
   return { success: true }
 }
 
-async function sendViaMailjet(payload: EmailPayload, apiKey: string, secret: string, settings: any) {
+async function sendViaMailjet(payload: EmailPayload, apiKey: string, secret: string, settings: SchoolEmailSettings) {
   if (!apiKey || !secret) return { success: false, error: 'Mailjet credentials not configured.' }
   const fromAddress = settings.smtpFrom ?? `noreply@school.com`
   const fromName = settings.name ?? 'School'
@@ -120,7 +122,7 @@ async function sendViaMailjet(payload: EmailPayload, apiKey: string, secret: str
   return { success: true }
 }
 
-async function sendViaSendGrid(payload: EmailPayload, apiKey: string, settings: any) {
+async function sendViaSendGrid(payload: EmailPayload, apiKey: string, settings: SchoolEmailSettings) {
   if (!apiKey) return { success: false, error: 'SendGrid API key not configured.' }
   const fromAddress = settings.smtpFrom ?? `noreply@school.com`
   const body = {
@@ -272,18 +274,26 @@ export function leaveDecisionEmailHtml(
   endDate: Date,
   schoolName: string,
 ): string {
-  const statusText = status === 'approved' ? 'approved' : 'declined'
+  const statusText = status === 'approved' ? 'approuvée' : 'refusée'
+  const leaveTypes: Record<string, string> = {
+    annual: 'Congé annuel',
+    sick: 'Congé maladie',
+    personal: 'Congé pour motif personnel',
+    bereavement: 'Congé pour décès d’un proche',
+    unpaid: 'Congé sans solde',
+    other: 'Autre',
+  }
   return `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2>${schoolName} — Leave Request ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}</h2>
-      <p>Hi ${staffName},</p>
-      <p>Your leave request has been <strong>${statusText}</strong>.</p>
+      <h2>${schoolName} — demande de congé ${statusText}</h2>
+      <p>Bonjour ${staffName},</p>
+      <p>Votre demande de congé a été <strong>${statusText}</strong>.</p>
       <table style="border-collapse:collapse;margin:16px 0">
-        <tr><td style="padding:4px 8px;font-weight:bold">Type:</td><td style="padding:4px 8px">${leaveType}</td></tr>
-        <tr><td style="padding:4px 8px;font-weight:bold">From:</td><td style="padding:4px 8px">${startDate.toLocaleDateString()}</td></tr>
-        <tr><td style="padding:4px 8px;font-weight:bold">To:</td><td style="padding:4px 8px">${endDate.toLocaleDateString()}</td></tr>
+        <tr><td style="padding:4px 8px;font-weight:bold">Type :</td><td style="padding:4px 8px">${leaveTypes[leaveType] ?? leaveType}</td></tr>
+        <tr><td style="padding:4px 8px;font-weight:bold">Du :</td><td style="padding:4px 8px">${startDate.toLocaleDateString('fr-FR')}</td></tr>
+        <tr><td style="padding:4px 8px;font-weight:bold">Au :</td><td style="padding:4px 8px">${endDate.toLocaleDateString('fr-FR')}</td></tr>
       </table>
-      <p>Please contact HR if you have any questions.</p>
+      <p>Contactez l’administration de l’établissement si vous avez des questions.</p>
     </div>
   `
 }

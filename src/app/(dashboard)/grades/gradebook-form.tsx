@@ -144,15 +144,17 @@ export default function GradebookForm({ classes, terms, defaultClassId }: Gradeb
 
         {/* Weight */}
         <div className="space-y-2">
-          <Label htmlFor="weight">Weight</Label>
+          <Label htmlFor="weight">Coefficient</Label>
           <Input
             id="weight"
             name="weight"
             type="number"
-            min={0}
+            min={0.1}
+            max={100}
             step={0.1}
             defaultValue={1}
           />
+          <p className="text-xs text-slate-500">Used to calculate the weighted subject average on the report card.</p>
         </div>
 
         {/* Due Date */}

@@ -9,7 +9,7 @@ export async function loginAction(
   password: string,
 ): Promise<{ success: boolean; error?: string }> {
   if (!email || !password) {
-    return { success: false, error: 'Email and password are required.' }
+    return { success: false, error: 'L’adresse e-mail et le mot de passe sont obligatoires.' }
   }
 
   const headersList = await headers()

@@ -1,4 +1,4 @@
-import { requireSession } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -20,7 +20,7 @@ function categoryLabel(c: string) {
 }
 
 export default async function CommunicationPage() {
-  const user = await requireSession()
+  const user = await requireRole(['admin', 'teacher', 'parent', 'student'])
 
   const now = new Date()
 

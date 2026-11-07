@@ -17,7 +17,7 @@ import {
   Award,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { submitAssignmentAction, unsubmitAssignmentAction } from './actions'
+import { getChildAssignmentsAction, submitAssignmentAction, unsubmitAssignmentAction } from './actions'
 
 type Assignment = {
   id: string
@@ -40,7 +40,6 @@ type Assignment = {
 type Props = {
   assignments: Assignment[]
   studentId: string | null
-  userRole: string
   childOptions: { id: string; name: string }[]
   isParent: boolean
 }
@@ -53,21 +52,24 @@ function statusOf(a: Assignment) {
 }
 
 const STATUS_CONFIG = {
-  graded: { label: 'Graded', className: 'bg-green-50 text-green-700 border-green-200', icon: Award },
-  submitted: { label: 'Submitted', className: 'bg-blue-50 text-blue-700 border-blue-200', icon: CheckCircle2 },
-  overdue: { label: 'Overdue', className: 'bg-red-50 text-red-700 border-red-200', icon: Clock },
-  pending: { label: 'Pending', className: 'bg-slate-100 text-slate-600 border-slate-200', icon: FileText },
+  graded: { label: 'Corrigé', className: 'bg-green-50 text-green-700 border-green-200', icon: Award },
+  submitted: { label: 'Remis', className: 'bg-blue-50 text-blue-700 border-blue-200', icon: CheckCircle2 },
+  overdue: { label: 'En retard', className: 'bg-red-50 text-red-600 border-red-200', icon: Clock },
+  pending: { label: 'À faire', className: 'bg-slate-100 text-slate-600 border-slate-200', icon: FileText },
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  assessment: 'Évaluation', exam: 'Examen', homework: 'Devoir', quiz: 'Interrogation',
 }
 
 function fmt(d: Date | null) {
   if (!d) return null
-  return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
   const status = statusOf(a)
   const cfg = STATUS_CONFIG[status]
-  const Icon = cfg.icon
 
   const [showSubmit, setShowSubmit] = useState(false)
   const [url, setUrl] = useState(a.submissionUrl ?? '')
@@ -126,7 +128,7 @@ function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
                 <CurrentIcon className="h-3 w-3" />
                 {currentCfg.label}
               </span>
-              <Badge variant="secondary" className="text-xs">{a.type}</Badge>
+              <Badge variant="secondary" className="text-xs">{TYPE_LABELS[a.type] ?? a.type}</Badge>
             </div>
 
             <div className="flex flex-wrap gap-3 text-xs text-slate-500">
@@ -137,7 +139,7 @@ function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
                 <>
                   <span>·</span>
                   <span className={cn(localStatus === 'overdue' && 'text-red-600 font-medium')}>
-                    Due {fmt(a.dueDate)}
+                    Échéance : {fmt(a.dueDate)}
                   </span>
                 </>
               )}
@@ -148,7 +150,7 @@ function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
                   rel="noopener noreferrer"
                   className="text-primary flex items-center gap-0.5 hover:underline"
                 >
-                  <ExternalLink className="h-3 w-3" /> View Assignment
+                  <ExternalLink className="h-3 w-3" /> Voir le sujet
                 </a>
               )}
             </div>
@@ -161,7 +163,7 @@ function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
             {localSubmittedAt && (
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-blue-600">
-                  Submitted {fmt(localSubmittedAt)}
+                  Remis le {fmt(localSubmittedAt)}
                 </span>
                 {localUrl && (
                   <a
@@ -170,7 +172,7 @@ function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
                     rel="noopener noreferrer"
                     className="text-xs text-primary flex items-center gap-0.5 hover:underline"
                   >
-                    <ExternalLink className="h-3 w-3" /> My submission
+                    <ExternalLink className="h-3 w-3" /> Mon devoir
                   </a>
                 )}
               </div>
@@ -197,7 +199,7 @@ function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
               {localStatus === 'pending' || localStatus === 'overdue' ? (
                 <Button size="sm" onClick={() => setShowSubmit((s) => !s)}>
                   <Upload className="h-3.5 w-3.5" />
-                  Submit
+                  Remettre
                 </Button>
               ) : localStatus === 'submitted' ? (
                 <Button
@@ -207,7 +209,7 @@ function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
                   disabled={isPending}
                 >
                   {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                  Withdraw
+                  Retirer
                 </Button>
               ) : null}
             </div>
@@ -218,29 +220,28 @@ function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
         {showSubmit && !isParent && (
           <div className="mt-3 border-t border-slate-100 pt-3 space-y-2">
             <div className="space-y-1">
-              <Label className="text-xs">Document URL (optional)</Label>
+              <Label className="text-xs">Lien du document (facultatif)</Label>
               <Input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="Paste Google Doc, OneDrive, or any link…"
+                placeholder="Collez un lien Google Docs, OneDrive ou autre…"
                 className="text-sm"
               />
               <p className="text-xs text-slate-400">
-                Paste a shareable link to your work — Google Doc, OneDrive file, or any URL.
-                Leave blank to submit without a document.
+                Collez un lien partageable vers votre travail. Laissez vide pour remettre sans document.
               </p>
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSubmit} disabled={isPending}>
                 {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                Confirm Submit
+                Confirmer la remise
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => { setShowSubmit(false); setUrl(a.submissionUrl ?? '') }}
               >
-                Cancel
+                Annuler
               </Button>
             </div>
           </div>
@@ -252,13 +253,17 @@ function AssignmentCard({ a, isParent }: { a: Assignment; isParent: boolean }) {
   )
 }
 
-export default function AssignmentList({ assignments, studentId, userRole, childOptions, isParent }: Props) {
+export default function AssignmentList({ assignments, studentId, childOptions, isParent }: Props) {
+  const [, startTransition] = useTransition()
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
     childOptions.length === 1 ? childOptions[0].id : null,
   )
+  const [visibleAssignments, setVisibleAssignments] = useState(assignments)
+  const [isLoadingChild, setIsLoadingChild] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // Group by status for display
-  const sorted = [...assignments].sort((a, b) => {
+  const sorted = [...visibleAssignments].sort((a, b) => {
     const order = { graded: 3, submitted: 1, overdue: 0, pending: 2 }
     return (order[statusOf(a) as keyof typeof order] ?? 2) - (order[statusOf(b) as keyof typeof order] ?? 2)
   })
@@ -270,7 +275,7 @@ export default function AssignmentList({ assignments, studentId, userRole, child
   if (!studentId && childOptions.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400 text-sm">
-        No student profile linked to this account.
+        Aucun profil élève n’est associé à ce compte.
       </div>
     )
   }
@@ -279,13 +284,32 @@ export default function AssignmentList({ assignments, studentId, userRole, child
     <div className="space-y-6">
       {isParent && childOptions.length > 1 && (
         <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-slate-700">Viewing assignments for:</label>
+          <label htmlFor="assignment-child" className="text-sm font-medium text-slate-700">Devoirs de :</label>
           <select
+            id="assignment-child"
             className="h-9 rounded-lg border border-input bg-white px-3 text-sm shadow-sm"
             value={selectedChildId ?? ''}
-            onChange={(e) => setSelectedChildId(e.target.value || null)}
+            onChange={(e) => {
+              const childId = e.target.value || null
+              setSelectedChildId(childId)
+              setVisibleAssignments([])
+              setLoadError(null)
+              if (!childId) return
+              setIsLoadingChild(true)
+              startTransition(async () => {
+                try {
+                  const result = await getChildAssignmentsAction(childId)
+                  setVisibleAssignments(result.assignments)
+                  setLoadError(result.error ?? null)
+                } catch {
+                  setLoadError('Impossible de charger les devoirs. Réessayez.')
+                } finally {
+                  setIsLoadingChild(false)
+                }
+              })
+            }}
           >
-            <option value="">Select a child…</option>
+            <option value="">Choisir un enfant…</option>
             {childOptions.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -293,16 +317,21 @@ export default function AssignmentList({ assignments, studentId, userRole, child
         </div>
       )}
 
-      {assignments.length === 0 ? (
+      {loadError && <p role="alert" className="text-sm text-destructive">{loadError}</p>}
+      {isLoadingChild ? (
+        <p className="text-sm text-slate-500">Chargement des devoirs…</p>
+      ) : isParent && childOptions.length > 1 && !selectedChildId ? (
+        <p className="text-sm text-slate-500">Choisissez un enfant pour afficher ses devoirs.</p>
+      ) : visibleAssignments.length === 0 ? (
         <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-400 text-sm">
-          No assignments found. Once your teacher creates assessments for your classes, they will appear here.
+          Aucun devoir pour le moment. Les évaluations créées pour vos classes apparaîtront ici.
         </div>
       ) : (
         <>
           {pending.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">
-                To Do ({pending.length})
+                À faire ({pending.length})
               </h2>
               <div className="space-y-3">
                 {pending.map((a) => <AssignmentCard key={a.id} a={a} isParent={isParent} />)}
@@ -313,7 +342,7 @@ export default function AssignmentList({ assignments, studentId, userRole, child
           {submitted.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">
-                Awaiting Marking ({submitted.length})
+                En attente de correction ({submitted.length})
               </h2>
               <div className="space-y-3">
                 {submitted.map((a) => <AssignmentCard key={a.id} a={a} isParent={isParent} />)}
@@ -324,7 +353,7 @@ export default function AssignmentList({ assignments, studentId, userRole, child
           {graded.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">
-                Marked ({graded.length})
+                Corrigés ({graded.length})
               </h2>
               <div className="space-y-3">
                 {graded.map((a) => <AssignmentCard key={a.id} a={a} isParent={isParent} />)}

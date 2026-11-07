@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,9 +26,10 @@ type AdminInfo = {
   confirmPassword: string
 }
 
-const STEPS = ['School Info', 'Admin Account', 'Review & Confirm']
+const STEPS = ['Établissement', 'Compte administrateur', 'Vérification']
 
 export default function SetupWizard() {
+  const router = useRouter()
   const [step, setStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -58,16 +60,16 @@ export default function SetupWizard() {
   }
 
   function validateStep1() {
-    if (!schoolInfo.name.trim()) return 'School name is required.'
-    if (!schoolInfo.currentYear || isNaN(Number(schoolInfo.currentYear))) return 'A valid year is required.'
+    if (!schoolInfo.name.trim()) return 'Le nom de l’établissement est obligatoire.'
+    if (!schoolInfo.currentYear || isNaN(Number(schoolInfo.currentYear))) return 'Saisissez une année valide.'
     return null
   }
 
   function validateStep2() {
-    if (!adminInfo.name.trim()) return 'Admin name is required.'
-    if (!adminInfo.email.trim()) return 'Admin email is required.'
-    if (adminInfo.password.length < 8) return 'Password must be at least 8 characters.'
-    if (adminInfo.password !== adminInfo.confirmPassword) return 'Passwords do not match.'
+    if (!adminInfo.name.trim()) return 'Le nom de l’administrateur est obligatoire.'
+    if (!adminInfo.email.trim()) return 'L’adresse e-mail de l’administrateur est obligatoire.'
+    if (adminInfo.password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.'
+    if (adminInfo.password !== adminInfo.confirmPassword) return 'Les mots de passe ne correspondent pas.'
     return null
   }
 
@@ -94,10 +96,9 @@ export default function SetupWizard() {
     startTransition(async () => {
       const result = await completeSetupAction(schoolInfo, adminInfo)
       if (result.success) {
-        window.location.href = '/dashboard'
+        router.replace('/dashboard')
       } else {
-        setError(result.error ?? 'Setup failed. Please try again.')
-        setStep(0)
+        setError(result.error ?? 'La configuration a échoué. Veuillez réessayer.')
       }
     })
   }
@@ -134,22 +135,22 @@ export default function SetupWizard() {
         {step === 0 && (
           <>
             <CardHeader>
-              <CardTitle>School Information</CardTitle>
-              <CardDescription>Tell us about your school.</CardDescription>
+              <CardTitle>Informations sur l’établissement</CardTitle>
+              <CardDescription>Renseignez les informations de votre établissement.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2 space-y-1.5">
-                  <Label htmlFor="school-name">School Name <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="school-name">Nom de l’établissement <span className="text-red-500">*</span></Label>
                   <Input
                     id="school-name"
-                    placeholder="e.g. Greenfield Primary School"
+                    placeholder="Ex. : École primaire de Conakry"
                     value={schoolInfo.name}
                     onChange={e => updateSchool('name', e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="short-name">Short Name / Abbreviation</Label>
+                  <Label htmlFor="short-name">Nom court / sigle</Label>
                   <Input
                     id="short-name"
                     placeholder="e.g. GPS"
@@ -158,7 +159,7 @@ export default function SetupWizard() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="school-email">School Email</Label>
+                  <Label htmlFor="school-email">E-mail de l’établissement</Label>
                   <Input
                     id="school-email"
                     type="email"
@@ -168,17 +169,17 @@ export default function SetupWizard() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="school-phone">Phone Number</Label>
+                  <Label htmlFor="school-phone">Téléphone</Label>
                   <Input
                     id="school-phone"
                     type="tel"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+224 600 00 00 00"
                     value={schoolInfo.phone}
                     onChange={e => updateSchool('phone', e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="current-year">Current Year <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="current-year">Année scolaire en cours <span className="text-red-500">*</span></Label>
                   <Input
                     id="current-year"
                     type="number"
@@ -189,23 +190,23 @@ export default function SetupWizard() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="school-type">School Type</Label>
+                  <Label htmlFor="school-type">Type d’établissement</Label>
                   <Select value={schoolInfo.schoolType} onValueChange={v => v != null && updateSchool('schoolType', v)}>
                     <SelectTrigger id="school-type">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="primary">Primary</SelectItem>
-                      <SelectItem value="secondary">Secondary</SelectItem>
-                      <SelectItem value="both">Primary &amp; Secondary</SelectItem>
+                      <SelectItem value="primary">Primaire</SelectItem>
+                      <SelectItem value="secondary">Secondaire</SelectItem>
+                      <SelectItem value="both">Primaire et secondaire</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="sm:col-span-2 space-y-1.5">
-                  <Label htmlFor="school-address">Address</Label>
+                  <Label htmlFor="school-address">Adresse</Label>
                   <Input
                     id="school-address"
-                    placeholder="123 School Road, City"
+                    placeholder="Quartier, commune, ville"
                     value={schoolInfo.address}
                     onChange={e => updateSchool('address', e.target.value)}
                   />
@@ -219,13 +220,13 @@ export default function SetupWizard() {
         {step === 1 && (
           <>
             <CardHeader>
-              <CardTitle>Administrator Account</CardTitle>
-              <CardDescription>Create the main admin account for your school.</CardDescription>
+              <CardTitle>Compte administrateur</CardTitle>
+              <CardDescription>Créez le compte principal de votre établissement.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="admin-name">Full Name <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="admin-name">Nom complet <span className="text-red-500">*</span></Label>
                   <Input
                     id="admin-name"
                     placeholder="Jane Smith"
@@ -234,7 +235,7 @@ export default function SetupWizard() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="admin-email">Email Address <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="admin-email">Adresse e-mail <span className="text-red-500">*</span></Label>
                   <Input
                     id="admin-email"
                     type="email"
@@ -244,28 +245,28 @@ export default function SetupWizard() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="admin-password">Password <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="admin-password">Mot de passe <span className="text-red-500">*</span></Label>
                   <Input
                     id="admin-password"
                     type="password"
-                    placeholder="Min. 8 characters"
+                    placeholder="8 caractères minimum"
                     value={adminInfo.password}
                     onChange={e => updateAdmin('password', e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="admin-confirm">Confirm Password <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="admin-confirm">Confirmer le mot de passe <span className="text-red-500">*</span></Label>
                   <Input
                     id="admin-confirm"
                     type="password"
-                    placeholder="Repeat password"
+                    placeholder="Saisissez-le à nouveau"
                     value={adminInfo.confirmPassword}
                     onChange={e => updateAdmin('confirmPassword', e.target.value)}
                   />
                 </div>
               </div>
               <p className="text-xs text-slate-500">
-                You can add more staff and configure additional settings after setup.
+                Vous pourrez ajouter du personnel et configurer d’autres paramètres après cette étape.
               </p>
             </CardContent>
           </>
@@ -275,21 +276,21 @@ export default function SetupWizard() {
         {step === 2 && (
           <>
             <CardHeader>
-              <CardTitle>Review &amp; Confirm</CardTitle>
-              <CardDescription>Check everything looks right before finishing setup.</CardDescription>
+              <CardTitle>Vérification et confirmation</CardTitle>
+              <CardDescription>Vérifiez les informations avant de terminer la configuration.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wide">School Details</h3>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wide">Détails de l’établissement</h3>
                 <dl className="divide-y divide-slate-100 rounded-lg border border-slate-100 overflow-hidden">
                   {[
-                    ['School Name', schoolInfo.name],
-                    ['Short Name', schoolInfo.shortName || '—'],
-                    ['Email', schoolInfo.email || '—'],
-                    ['Phone', schoolInfo.phone || '—'],
-                    ['Address', schoolInfo.address || '—'],
-                    ['School Type', schoolInfo.schoolType === 'both' ? 'Primary & Secondary' : schoolInfo.schoolType.charAt(0).toUpperCase() + schoolInfo.schoolType.slice(1)],
-                    ['Current Year', schoolInfo.currentYear],
+                    ['Nom', schoolInfo.name],
+                    ['Nom court', schoolInfo.shortName || '—'],
+                    ['E-mail', schoolInfo.email || '—'],
+                    ['Téléphone', schoolInfo.phone || '—'],
+                    ['Adresse', schoolInfo.address || '—'],
+                    ['Type', schoolInfo.schoolType === 'both' ? 'Primaire et secondaire' : schoolInfo.schoolType === 'primary' ? 'Primaire' : 'Secondaire'],
+                    ['Année scolaire', schoolInfo.currentYear],
                   ].map(([label, value]) => (
                     <div key={label} className="flex px-4 py-2.5 bg-white even:bg-slate-50/50 text-sm">
                       <dt className="w-36 font-medium text-slate-500 flex-shrink-0">{label}</dt>
@@ -299,12 +300,12 @@ export default function SetupWizard() {
                 </dl>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wide">Administrator Account</h3>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wide">Compte administrateur</h3>
                 <dl className="divide-y divide-slate-100 rounded-lg border border-slate-100 overflow-hidden">
                   {[
-                    ['Name', adminInfo.name],
-                    ['Email', adminInfo.email],
-                    ['Password', '••••••••'],
+                    ['Nom', adminInfo.name],
+                    ['E-mail', adminInfo.email],
+                    ['Mot de passe', '••••••••'],
                   ].map(([label, value]) => (
                     <div key={label} className="flex px-4 py-2.5 bg-white even:bg-slate-50/50 text-sm">
                       <dt className="w-36 font-medium text-slate-500 flex-shrink-0">{label}</dt>
@@ -331,11 +332,11 @@ export default function SetupWizard() {
             onClick={handleBack}
             disabled={step === 0 || isPending}
           >
-            Back
+            Retour
           </Button>
           {step < 2 ? (
             <Button onClick={handleNext}>
-              Continue
+              Continuer
             </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={isPending}>
@@ -345,9 +346,9 @@ export default function SetupWizard() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Setting up…
+                  Configuration en cours…
                 </span>
-              ) : 'Complete Setup'}
+            ) : 'Terminer la configuration'}
             </Button>
           )}
         </div>

@@ -5,6 +5,7 @@ import { ChevronLeft, Download, FileText, Pencil } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import PublishReportCards from './publish-report-cards'
+import BulkReportCardDownload from './bulk-report-card-download'
 
 type SearchParams = { termId?: string; yearLevel?: string }
 
@@ -19,7 +20,7 @@ export default async function ReportCardsPage({
   const termId = sp.termId ?? undefined
   const yearLevel = sp.yearLevel ? parseInt(sp.yearLevel) : undefined
 
-  const [terms, students, settings] = await Promise.all([
+  const [terms, students, settings, termCards] = await Promise.all([
     db.term.findMany({
       include: { academicYear: true },
       orderBy: [{ academicYear: { year: 'desc' } }, { termNumber: 'asc' }],
@@ -35,12 +36,23 @@ export default async function ReportCardsPage({
       orderBy: [{ yearLevel: 'asc' }, { user: { name: 'asc' } }],
     }),
     db.schoolSettings.findFirst({ select: { aiProvider: true, aiReportMode: true } }),
+    termId
+      ? db.reportCard.findMany({ where: { termId }, select: { studentId: true, approvalStatus: true, published: true } })
+      : Promise.resolve([]),
   ])
   const aiEnabled = !!settings?.aiProvider && settings.aiProvider !== 'none'
 
   const yearLevels = [...new Set(students.map(s => s.yearLevel).filter((y): y is number => y !== null))].sort((a, b) => a - b)
 
   const termQuery = termId ? `?termId=${termId}` : ''
+  const cardsByStudent = new Map(termCards.map(card => [card.studentId, card] as const))
+  const pendingCount = termCards.filter(card => card.approvalStatus === 'pending_approval').length
+  const approvedStudents = termId
+    ? students.filter(student => {
+        const card = cardsByStudent.get(student.id)
+        return card?.approvalStatus === 'approved' && card.published
+      })
+    : []
 
   return (
     <div className="space-y-6">
@@ -111,8 +123,13 @@ export default async function ReportCardsPage({
           termId={termId}
           aiEnabled={aiEnabled}
           aiMode={settings?.aiReportMode ?? 'assist'}
+          pendingCount={pendingCount}
         />
       )}
+      {termId && approvedStudents.length > 0 && <BulkReportCardDownload
+        termId={termId}
+        students={approvedStudents.map(student => ({ id: student.id, studentId: student.studentId, name: student.user.name }))}
+      />}
 
       {/* Student list */}
       {students.length === 0 ? (
@@ -127,6 +144,7 @@ export default async function ReportCardsPage({
                 <th className="text-left px-4 py-3 font-medium text-slate-600">Student</th>
                 <th className="text-left px-4 py-3 font-medium text-slate-600">Student ID</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-600">Year Level</th>
+                <th className="text-center px-4 py-3 font-medium text-slate-600">Bulletin status</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-600">Actions</th>
               </tr>
             </thead>
@@ -148,6 +166,15 @@ export default async function ReportCardsPage({
                     ) : (
                       <span className="text-slate-400">—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {termId ? (
+                      <Badge variant={cardsByStudent.get(s.id)?.approvalStatus === 'approved' ? 'default' : 'outline'}>
+                        {{ draft: 'Draft', pending_approval: 'Pending review', approved: 'Published', rejected: 'Returned' }[
+                          cardsByStudent.get(s.id)?.approvalStatus ?? 'draft'
+                        ]}
+                      </Badge>
+                    ) : <span className="text-slate-400">Select a term</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">

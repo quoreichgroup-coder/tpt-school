@@ -8,7 +8,7 @@ test.describe('Attendance module', () => {
 
   test('attendance page loads', async ({ page }) => {
     await page.goto('/attendance')
-    await expect(page.getByRole('heading', { name: /attendance/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /présences|attendance/i })).toBeVisible()
   })
 
   test('attendance report page loads', async ({ page }) => {

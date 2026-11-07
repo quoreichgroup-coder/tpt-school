@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, DollarSign, AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import FeeReminderButton from './fee-reminder-button'
+import { minorUnitsToAmount, parseMoneyToMinorUnits } from '@/lib/money'
 
 const STATUS_STYLES: Record<string, string> = {
   unpaid: 'bg-yellow-100 text-yellow-700',
@@ -16,10 +17,18 @@ const STATUS_STYLES: Record<string, string> = {
   waived: 'bg-slate-100 text-slate-500',
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  unpaid: 'Impayée', partial: 'Partiellement payée', paid: 'Payée', overdue: 'En retard', waived: 'Annulée',
+}
+
+const FREQUENCY_LABELS: Record<string, string> = {
+  annual: 'Annuelle', term: 'Par trimestre', 'once-off': 'Ponctuelle',
+}
+
 function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[status] ?? 'bg-slate-100 text-slate-500'}`}>
-      {status}
+      {STATUS_LABELS[status] ?? status}
     </span>
   )
 }
@@ -29,7 +38,7 @@ function formatCurrency(amount: number, symbol: string) {
 }
 
 export default async function FinancePage() {
-  await requireRole(['admin'])
+  await requireRole(['admin', 'accountant'])
 
   const settings = await db.schoolSettings.findFirst()
   const currencySymbol = settings?.currencySymbol ?? '$'
@@ -46,10 +55,12 @@ export default async function FinancePage() {
     }),
   ])
 
-  const totalOutstanding = unpaidInvoices.reduce(
-    (sum, inv) => sum + (inv.totalAmount - (inv.paidAmount ?? 0)),
-    0,
-  )
+  const totalOutstandingMinorUnits = unpaidInvoices.reduce((sum, inv) => {
+    const total = parseMoneyToMinorUnits(inv.totalAmount.toString()) ?? 0
+    const paid = parseMoneyToMinorUnits(inv.paidAmount.toString()) ?? 0
+    return sum + total - paid
+  }, 0)
+  const totalOutstanding = minorUnitsToAmount(totalOutstandingMinorUnits)
 
   // Paid this term (approximate: current month for simplicity)
   const termStart = new Date()
@@ -65,15 +76,15 @@ export default async function FinancePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Finance</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Invoices, payments, and fee management</p>
+          <h1 className="text-2xl font-bold text-slate-900">Finances</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Factures, paiements et gestion des frais</p>
         </div>
         <div className="flex items-start gap-3 flex-wrap justify-end">
           <FeeReminderButton />
           <Link href="/finance/invoices/new">
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              New Invoice
+              Nouvelle facture
             </Button>
           </Link>
         </div>
@@ -83,42 +94,42 @@ export default async function FinancePage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="border-slate-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Outstanding</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Total restant dû</CardTitle>
             <div className="w-9 h-9 rounded-lg bg-yellow-100 flex items-center justify-center">
               <Clock className="w-4 h-4 text-yellow-600" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900">{formatCurrency(totalOutstanding, currencySymbol)}</div>
-            <p className="text-xs text-slate-500 mt-1">Across unpaid &amp; partial invoices</p>
+            <p className="text-xs text-slate-500 mt-1">Factures impayées ou partiellement payées</p>
           </CardContent>
         </Card>
 
         <Card className="border-slate-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Paid This Month</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Encaissé ce mois-ci</CardTitle>
             <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
               <CheckCircle className="w-4 h-4 text-green-600" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900">
-              {formatCurrency(paidThisTerm._sum.amount ?? 0, currencySymbol)}
+              {formatCurrency(Number(paidThisTerm._sum.amount ?? 0), currencySymbol)}
             </div>
-            <p className="text-xs text-slate-500 mt-1">Total payments received</p>
+            <p className="text-xs text-slate-500 mt-1">Total des paiements reçus</p>
           </CardContent>
         </Card>
 
         <Card className="border-slate-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Overdue Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Factures en retard</CardTitle>
             <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center">
               <AlertCircle className="w-4 h-4 text-red-600" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900">{overdueInvoices}</div>
-            <p className="text-xs text-slate-500 mt-1">Require attention</p>
+            <p className="text-xs text-slate-500 mt-1">À traiter</p>
           </CardContent>
         </Card>
       </div>
@@ -126,8 +137,8 @@ export default async function FinancePage() {
       {/* Tabs */}
       <Tabs defaultValue="invoices">
         <TabsList>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
-          <TabsTrigger value="fee-types">Fee Types</TabsTrigger>
+          <TabsTrigger value="invoices">Factures</TabsTrigger>
+          <TabsTrigger value="fee-types">Types de frais</TabsTrigger>
         </TabsList>
 
         {/* Invoices Tab */}
@@ -135,19 +146,19 @@ export default async function FinancePage() {
           {allInvoices.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
               <DollarSign className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p>No invoices yet.</p>
+              <p>Aucune facture pour le moment.</p>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-slate-100">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Student</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Issue Date</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Due Date</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Élève</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Date d’émission</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Échéance</th>
                     <th className="text-right px-4 py-3 font-medium text-slate-600">Total</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Paid</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
+                    <th className="text-right px-4 py-3 font-medium text-slate-600">Payé</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Statut</th>
                     <th className="text-right px-4 py-3 font-medium text-slate-600">Actions</th>
                   </tr>
                 </thead>
@@ -164,10 +175,10 @@ export default async function FinancePage() {
                         {format(new Date(inv.dueDate), 'dd MMM yyyy')}
                       </td>
                       <td className="px-4 py-3 text-right text-slate-900">
-                        {formatCurrency(inv.totalAmount, currencySymbol)}
+                        {formatCurrency(Number(inv.totalAmount), currencySymbol)}
                       </td>
                       <td className="px-4 py-3 text-right text-slate-600">
-                        {formatCurrency(inv.paidAmount ?? 0, currencySymbol)}
+                        {formatCurrency(Number(inv.paidAmount ?? 0), currencySymbol)}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={inv.status} />
@@ -177,7 +188,7 @@ export default async function FinancePage() {
                           href={`/finance/invoices/${inv.id}`}
                           className="text-primary text-xs font-medium hover:underline"
                         >
-                          View
+                          Voir
                         </Link>
                       </td>
                     </tr>
@@ -193,22 +204,22 @@ export default async function FinancePage() {
           <div className="flex justify-end mb-3">
             <Link href="/finance/fee-types">
               <Button variant="outline" size="sm">
-                Manage Fee Types
+                Gérer les types de frais
               </Button>
             </Link>
           </div>
           {feeTypes.length === 0 ? (
-            <div className="text-center py-12 text-slate-400">No fee types defined yet.</div>
+            <div className="text-center py-12 text-slate-400">Aucun type de frais défini.</div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-slate-100">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Name</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Amount</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Frequency</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Year Level</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Nom</th>
+                    <th className="text-right px-4 py-3 font-medium text-slate-600">Montant</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Fréquence</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Niveau</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Statut</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -216,11 +227,11 @@ export default async function FinancePage() {
                     <tr key={ft.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-slate-900">{ft.name}</td>
                       <td className="px-4 py-3 text-right text-slate-900">
-                        {formatCurrency(ft.amount, currencySymbol)}
+                        {formatCurrency(Number(ft.amount), currencySymbol)}
                       </td>
-                      <td className="px-4 py-3 text-slate-600 capitalize">{ft.frequency}</td>
+                      <td className="px-4 py-3 text-slate-600">{FREQUENCY_LABELS[ft.frequency] ?? ft.frequency}</td>
                       <td className="px-4 py-3 text-slate-600">
-                        {ft.yearLevel != null ? `Year ${ft.yearLevel}` : 'All years'}
+                        {ft.yearLevel != null ? `Niveau ${ft.yearLevel}` : 'Tous les niveaux'}
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -230,7 +241,7 @@ export default async function FinancePage() {
                               : 'bg-slate-100 text-slate-500'
                           }`}
                         >
-                          {ft.active ? 'Active' : 'Inactive'}
+                          {ft.active ? 'Actif' : 'Inactif'}
                         </span>
                       </td>
                     </tr>

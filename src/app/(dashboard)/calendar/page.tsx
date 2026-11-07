@@ -1,9 +1,9 @@
-import { requireSession } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
 import CalendarView from './calendar-view'
 
 export default async function CalendarPage() {
-  const session = await requireSession()
+  const session = await requireRole(['admin', 'teacher', 'parent', 'student'])
 
   // Filter events visible to this user's role
   const events = await db.schoolEvent.findMany({

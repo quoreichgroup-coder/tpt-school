@@ -5,6 +5,7 @@ import AssignmentList from './assignment-list'
 
 export default async function AssignmentsPage() {
   const user = await requireSession()
+  if (user.role === 'accountant') redirect('/finance')
 
   // Teachers and admins see the workload page instead
   if (user.role === 'admin' || user.role === 'teacher') redirect('/workload')
@@ -79,17 +80,16 @@ export default async function AssignmentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Assignments</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Devoirs</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          View your assignments, submit work, and check your results.
-          You can link your Google Doc, OneDrive file, or any URL when submitting.
+          Consultez vos devoirs, remettez votre travail et vérifiez vos résultats.
+          Vous pouvez joindre un lien Google Docs, OneDrive ou toute autre adresse web.
         </p>
       </div>
 
       <AssignmentList
         assignments={assignments}
         studentId={studentId}
-        userRole={user.role}
         childOptions={childOptions}
         isParent={user.role === 'parent'}
       />

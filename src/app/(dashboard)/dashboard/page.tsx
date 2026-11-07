@@ -1,4 +1,5 @@
 import { requireSession } from '@/lib/auth'
+import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
@@ -36,16 +37,116 @@ async function getTeacherStats(userId: string) {
   const staff = await db.staff.findUnique({ where: { userId } })
   if (!staff) return { myClasses: 0, myStudents: 0, todayAttendance: 0, pendingGrades: 0 }
 
-  const [myClasses, pendingGrades] = await Promise.all([
-    db.classTeacher.count({ where: { staffId: staff.id } }),
-    db.grade.count({ where: { gradedAt: null, gradebook: { class: { teachers: { some: { staffId: staff.id } } } } } }),
+  const activeYear = await db.academicYear.findFirst({ where: { active: true }, select: { id: true } })
+  if (!activeYear) return { myClasses: 0, myStudents: 0, todayAttendance: 0, pendingGrades: 0 }
+
+  const classes = await db.classTeacher.findMany({
+    where: { staffId: staff.id, class: { academicYearId: activeYear.id } },
+    select: { classId: true },
+  })
+  const classIds = classes.map(assignment => assignment.classId)
+  if (classIds.length === 0) return { myClasses: 0, myStudents: 0, todayAttendance: 0, pendingGrades: 0 }
+
+  const enrolments = await db.classEnrolment.findMany({
+    where: { classId: { in: classIds }, status: 'active' },
+    select: { studentId: true },
+  })
+  const studentIds = [...new Set(enrolments.map(enrolment => enrolment.studentId))]
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  const endOfToday = new Date(startOfToday)
+  endOfToday.setDate(endOfToday.getDate() + 1)
+
+  const [todayAttendance, pendingGrades] = await Promise.all([
+    studentIds.length
+      ? db.attendance.count({
+          where: { studentId: { in: studentIds }, date: { gte: startOfToday, lt: endOfToday }, status: 'present' },
+        })
+      : Promise.resolve(0),
+    db.grade.count({
+      where: { gradedAt: null, gradebook: { classId: { in: classIds } } },
+    }),
   ])
 
   return {
-    myClasses,
-    myStudents: 0, // placeholder
-    todayAttendance: 0, // placeholder
+    myClasses: classIds.length,
+    myStudents: studentIds.length,
+    todayAttendance,
     pendingGrades,
+  }
+}
+
+async function getFamilySummary(userId: string, role: 'parent' | 'student') {
+  let studentIds: string[]
+  if (role === 'student') {
+    const student = await db.student.findUnique({ where: { userId }, select: { id: true } })
+    studentIds = student ? [student.id] : []
+  } else {
+    const parent = await db.parent.findUnique({
+        where: { userId },
+        include: { students: { where: { student: { enrollmentStatus: 'active' } }, select: { studentId: true } } },
+      })
+    studentIds = parent?.students.map(link => link.studentId) ?? []
+  }
+
+  const now = new Date()
+  const [term, visibleNotices, classes] = await Promise.all([
+    db.term.findFirst({
+      where: { startDate: { lte: now }, endDate: { gte: now } },
+      orderBy: { startDate: 'desc' },
+      select: { id: true },
+    }),
+    db.notice.findMany({
+      where: {
+        AND: [
+          { OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] },
+          { OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] },
+          { OR: [{ targetRoles: 'all' }, { targetRoles: { contains: role } }] },
+        ],
+      },
+      select: { id: true },
+    }),
+    role === 'student' && studentIds.length
+      ? db.classEnrolment.count({ where: { studentId: studentIds[0], status: 'active' } })
+      : Promise.resolve(0),
+  ])
+
+  if (studentIds.length === 0) {
+    return { children: 0, classes, attendanceRate: '—', latestGrade: '—', unreadNotices: visibleNotices.length }
+  }
+
+  const [attendance, latestGrade, reads] = await Promise.all([
+    db.attendance.findMany({
+      where: { studentId: { in: studentIds }, ...(term ? { termId: term.id } : {}) },
+      select: { status: true },
+    }),
+    db.grade.findFirst({
+      where: {
+        studentId: { in: studentIds },
+        score: { not: null },
+        ...(term ? { gradebook: { termId: term.id } } : {}),
+      },
+      orderBy: { gradedAt: 'desc' },
+      select: { score: true, grade: true, gradebook: { select: { maxScore: true } } },
+    }),
+    db.noticeRead.findMany({
+      where: { userId, noticeId: { in: visibleNotices.map(notice => notice.id) } },
+      select: { noticeId: true },
+    }),
+  ])
+
+  const present = attendance.filter(record => record.status === 'present').length
+  const attendanceRate = attendance.length ? `${Math.round(present / attendance.length * 100)} %` : '—'
+  const latestGradeLabel = latestGrade
+    ? latestGrade.grade ?? `${Math.round((latestGrade.score! / latestGrade.gradebook.maxScore) * 100)} %`
+    : '—'
+
+  return {
+    children: role === 'parent' ? studentIds.length : 0,
+    classes,
+    attendanceRate,
+    latestGrade: latestGradeLabel,
+    unreadNotices: visibleNotices.length - reads.length,
   }
 }
 
@@ -99,9 +200,9 @@ async function getAtRiskStudents(studentIdFilter?: string[]): Promise<AtRiskStud
 }
 
 const FLAG_LABELS: Record<RiskFlag, { label: string; className: string }> = {
-  attendance: { label: 'Low Attendance', className: 'bg-orange-100 text-orange-700' },
-  behaviour:  { label: 'Recent Incident', className: 'bg-red-100 text-red-700' },
-  grades:     { label: 'Declining Grades', className: 'bg-amber-100 text-amber-700' },
+  attendance: { label: 'Présences faibles', className: 'bg-orange-100 text-orange-700' },
+  behaviour:  { label: 'Incident récent', className: 'bg-red-100 text-red-700' },
+  grades:     { label: 'Notes en baisse', className: 'bg-amber-100 text-amber-700' },
 }
 
 function AtRiskWidget({ students }: { students: AtRiskStudent[] }) {
@@ -110,7 +211,7 @@ function AtRiskWidget({ students }: { students: AtRiskStudent[] }) {
     <div>
       <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
         <AlertTriangle className="w-5 h-5 text-amber-500" />
-        At-Risk Students
+        Élèves à suivre
       </h2>
       <Card className="border-slate-100 shadow-sm">
         <CardContent className="p-0">
@@ -125,7 +226,7 @@ function AtRiskWidget({ students }: { students: AtRiskStudent[] }) {
                     {s.name}
                   </Link>
                   {s.yearLevel != null && (
-                    <span className="text-xs text-slate-400 shrink-0">Yr {s.yearLevel}</span>
+                    <span className="text-xs text-slate-400 shrink-0">Niv. {s.yearLevel}</span>
                   )}
                 </div>
                 <div className="flex gap-1.5 flex-wrap justify-end shrink-0 ml-3">
@@ -171,14 +272,15 @@ function StatCard({ title, value, description, icon: Icon, color = 'bg-primary/1
 
 export default async function DashboardPage() {
   const user = await requireSession()
+  if (user.role === 'accountant') redirect('/finance')
   const settings = await db.schoolSettings.findFirst()
-  const schoolName = settings?.name ?? 'Your School'
+  const schoolName = settings?.name ?? 'Votre établissement'
 
   const now = new Date()
   const greeting =
-    now.getHours() < 12 ? 'Good morning' :
-    now.getHours() < 17 ? 'Good afternoon' :
-    'Good evening'
+    now.getHours() < 12 ? 'Bonjour' :
+    now.getHours() < 17 ? 'Bon après-midi' :
+    'Bonsoir'
 
   if (user.role === 'admin') {
     const [stats, atRiskStudents] = await Promise.all([getAdminStats(), getAtRiskStudents()])
@@ -188,38 +290,38 @@ export default async function DashboardPage() {
         <div className="rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6 md:p-8 shadow-lg">
           <p className="text-primary-foreground/70 text-sm font-medium">{greeting}</p>
           <h1 className="text-2xl md:text-3xl font-bold mt-0.5">{user.name}</h1>
-          <p className="text-primary-foreground/80 text-sm mt-1">{schoolName} &mdash; Administrator</p>
+          <p className="text-primary-foreground/80 text-sm mt-1">{schoolName} &mdash; Administration</p>
         </div>
 
         {/* Stats */}
         <div>
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Overview</h2>
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Vue d’ensemble</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
-              title="Total Students"
+              title="Nombre d’élèves"
               value={stats.totalStudents}
-              description="Currently enrolled"
+              description="Actuellement inscrits"
               icon={GraduationCap}
               color="bg-blue-100 text-blue-600"
             />
             <StatCard
-              title="Total Staff"
+              title="Personnel"
               value={stats.totalStaff}
-              description="Staff members"
+              description="Membres du personnel"
               icon={Users}
               color="bg-violet-100 text-violet-600"
             />
             <StatCard
-              title="Today's Attendance"
+              title="Présences du jour"
               value={stats.todayAttendance}
-              description="Present today"
+              description="Élèves présents aujourd’hui"
               icon={ClipboardCheck}
               color="bg-green-100 text-green-600"
             />
             <StatCard
-              title="Outstanding Fees"
+              title="Frais impayés"
               value={stats.outstandingFees}
-              description="Unpaid invoices"
+              description="Factures non réglées"
               icon={DollarSign}
               color="bg-amber-100 text-amber-600"
             />
@@ -231,13 +333,13 @@ export default async function DashboardPage() {
 
         {/* Quick links */}
         <div>
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Quick Actions</h2>
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Actions rapides</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: 'Add Student', href: '/dashboard/students/new', icon: GraduationCap },
-              { label: 'Take Attendance', href: '/dashboard/attendance', icon: ClipboardCheck },
-              { label: 'View Reports', href: '/dashboard/reports', icon: Award },
-              { label: 'Manage Staff', href: '/dashboard/staff', icon: Users },
+              { label: 'Ajouter un élève', href: '/students/new', icon: GraduationCap },
+              { label: 'Saisir les présences', href: '/attendance', icon: ClipboardCheck },
+              { label: 'Voir les rapports', href: '/reports', icon: Award },
+              { label: 'Gérer le personnel', href: '/staff', icon: Users },
             ].map(item => (
               <a
                 key={item.href}
@@ -275,37 +377,37 @@ export default async function DashboardPage() {
         <div className="rounded-2xl bg-gradient-to-r from-violet-600 to-violet-500 text-white p-6 md:p-8 shadow-lg">
           <p className="text-white/70 text-sm font-medium">{greeting}</p>
           <h1 className="text-2xl md:text-3xl font-bold mt-0.5">{user.name}</h1>
-          <p className="text-white/80 text-sm mt-1">{schoolName} &mdash; Teacher</p>
+          <p className="text-white/80 text-sm mt-1">{schoolName} &mdash; Enseignant</p>
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Your Overview</h2>
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Mon aperçu</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
-              title="My Classes"
+              title="Mes classes"
               value={stats.myClasses}
-              description="Classes assigned"
+              description="Classes attribuées"
               icon={BookOpen}
               color="bg-violet-100 text-violet-600"
             />
             <StatCard
-              title="Students"
+              title="Élèves"
               value={stats.myStudents}
-              description="In your classes"
+              description="Dans vos classes"
               icon={GraduationCap}
               color="bg-blue-100 text-blue-600"
             />
             <StatCard
-              title="Today's Attendance"
+              title="Présences du jour"
               value={stats.todayAttendance}
-              description="Marked present"
+              description="Marqués présents"
               icon={CalendarCheck}
               color="bg-green-100 text-green-600"
             />
             <StatCard
-              title="Pending Grades"
+              title="Notes à corriger"
               value={stats.pendingGrades}
-              description="Awaiting grading"
+              description="En attente de correction"
               icon={FileWarning}
               color="bg-amber-100 text-amber-600"
             />
@@ -318,42 +420,43 @@ export default async function DashboardPage() {
   }
 
   if (user.role === 'parent') {
+    const summary = await getFamilySummary(user.id, 'parent')
     return (
       <div className="space-y-8">
         <div className="rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white p-6 md:p-8 shadow-lg">
           <p className="text-white/70 text-sm font-medium">{greeting}</p>
           <h1 className="text-2xl md:text-3xl font-bold mt-0.5">{user.name}</h1>
-          <p className="text-white/80 text-sm mt-1">{schoolName} &mdash; Parent Portal</p>
+          <p className="text-white/80 text-sm mt-1">{schoolName} &mdash; Espace parent</p>
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Your Children</h2>
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Mes enfants</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
-              title="Children Enrolled"
-              value="—"
-              description="Active enrolments"
+              title="Enfants inscrits"
+              value={summary.children}
+              description="Inscriptions actives"
               icon={GraduationCap}
               color="bg-emerald-100 text-emerald-600"
             />
             <StatCard
-              title="Attendance Rate"
-              value="—"
-              description="This term"
+              title="Taux de présence"
+              value={summary.attendanceRate}
+              description="Ce trimestre"
               icon={CalendarCheck}
               color="bg-blue-100 text-blue-600"
             />
             <StatCard
-              title="Latest Grades"
-              value="—"
-              description="Most recent results"
+              title="Dernières notes"
+              value={summary.latestGrade}
+              description="Résultats les plus récents"
               icon={Award}
               color="bg-violet-100 text-violet-600"
             />
             <StatCard
-              title="Notices"
-              value="—"
-              description="Unread notices"
+              title="Annonces"
+              value={summary.unreadNotices}
+              description="Annonces non lues"
               icon={BookOpen}
               color="bg-amber-100 text-amber-600"
             />
@@ -364,42 +467,43 @@ export default async function DashboardPage() {
   }
 
   // Student
+  const summary = await getFamilySummary(user.id, 'student')
   return (
     <div className="space-y-8">
       <div className="rounded-2xl bg-gradient-to-r from-sky-600 to-sky-500 text-white p-6 md:p-8 shadow-lg">
         <p className="text-white/70 text-sm font-medium">{greeting}</p>
         <h1 className="text-2xl md:text-3xl font-bold mt-0.5">{user.name}</h1>
-        <p className="text-white/80 text-sm mt-1">{schoolName} &mdash; Student Portal</p>
+        <p className="text-white/80 text-sm mt-1">{schoolName} &mdash; Espace élève</p>
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">Your Summary</h2>
+        <h2 className="text-lg font-semibold text-slate-800 mb-4">Mon résumé</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard
-            title="My Classes"
-            value="—"
-            description="This term"
+            title="Mes classes"
+            value={summary.classes}
+            description="Ce trimestre"
             icon={BookOpen}
             color="bg-sky-100 text-sky-600"
           />
           <StatCard
-            title="Attendance"
-            value="—"
-            description="This term"
+            title="Présences"
+            value={summary.attendanceRate}
+            description="Ce trimestre"
             icon={CalendarCheck}
             color="bg-green-100 text-green-600"
           />
           <StatCard
-            title="Latest Grade"
-            value="—"
-            description="Most recent"
+            title="Dernière note"
+            value={summary.latestGrade}
+            description="La plus récente"
             icon={Award}
             color="bg-violet-100 text-violet-600"
           />
           <StatCard
-            title="Notices"
-            value="—"
-            description="Unread"
+            title="Annonces"
+            value={summary.unreadNotices}
+            description="Non lues"
             icon={BookOpen}
             color="bg-amber-100 text-amber-600"
           />

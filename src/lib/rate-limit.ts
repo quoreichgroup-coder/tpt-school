@@ -21,7 +21,7 @@ export async function checkLoginRateLimit(
   if (byEmail >= MAX_ATTEMPTS || byIp >= MAX_ATTEMPTS) {
     return {
       allowed: false,
-      error: `Too many failed login attempts. Please try again in ${WINDOW_MINUTES} minutes.`,
+      error: `Trop de tentatives de connexion échouées. Réessayez dans ${WINDOW_MINUTES} minutes.`,
     }
   }
   return { allowed: true }

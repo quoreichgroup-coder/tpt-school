@@ -1,18 +1,17 @@
 'use server'
 
 import { db } from '@/lib/db'
-import { requireSession, requireRole } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+
+const COMMUNICATION_ROLES = ['admin', 'teacher', 'parent', 'student']
 
 // ─── Notices ─────────────────────────────────────────────────────────────────
 
 export async function createNoticeAction(formData: FormData): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireSession()
-    if (!['admin', 'teacher'].includes(user.role)) {
-      return { success: false, error: 'Unauthorised.' }
-    }
+    const user = await requireRole(['admin', 'teacher'])
 
     const title = (formData.get('title') as string)?.trim()
     const body = (formData.get('body') as string)?.trim()
@@ -68,14 +67,16 @@ export async function sendMessageAction(
   body: string,
 ): Promise<{ success: boolean; error?: string; id?: string }> {
   try {
-    const user = await requireSession()
+    const user = await requireRole(COMMUNICATION_ROLES)
 
     if (!recipientId || !subject?.trim() || !body?.trim()) {
       return { success: false, error: 'Recipient, subject, and body are required.' }
     }
 
-    const recipient = await db.user.findUnique({ where: { id: recipientId } })
-    if (!recipient) return { success: false, error: 'Recipient not found.' }
+    const recipient = await db.user.findUnique({ where: { id: recipientId }, select: { id: true, role: true, active: true } })
+    if (!recipient || !recipient.active || !COMMUNICATION_ROLES.includes(recipient.role)) {
+      return { success: false, error: 'Recipient not found.' }
+    }
 
     // Create root message — threadId must equal message.id, so we do a two-step write
     const message = await db.message.create({
@@ -101,7 +102,7 @@ export async function sendMessageAction(
 
 export async function markMessageReadAction(messageId: string): Promise<void> {
   try {
-    const user = await requireSession()
+    const user = await requireRole(COMMUNICATION_ROLES)
     await db.messageRecipient.updateMany({
       where: { messageId, userId: user.id, readAt: null },
       data: { readAt: new Date() },
@@ -113,7 +114,7 @@ export async function markMessageReadAction(messageId: string): Promise<void> {
 
 export async function recordNoticeReadAction(noticeId: string): Promise<void> {
   try {
-    const user = await requireSession()
+    const user = await requireRole(COMMUNICATION_ROLES)
     await db.noticeRead.upsert({
       where: { noticeId_userId: { noticeId, userId: user.id } },
       create: { noticeId, userId: user.id },
@@ -129,7 +130,7 @@ export async function sendReplyAction(
   body: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await requireSession()
+    const user = await requireRole(COMMUNICATION_ROLES)
 
     if (!body?.trim()) return { success: false, error: 'Reply body is required.' }
 

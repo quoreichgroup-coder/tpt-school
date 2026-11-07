@@ -1,6 +1,7 @@
 import { requireRole } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { currentDate } from '@/lib/dates'
 import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -60,6 +61,18 @@ export default async function StudentDetailPage({ params }: { params: Params }) 
   const session = await requireRole(['admin', 'teacher'])
   const { id } = await params
 
+  if (session.role === 'teacher') {
+    const assigned = await db.classEnrolment.findFirst({
+      where: {
+        studentId: id,
+        status: 'active',
+        class: { teachers: { some: { staff: { userId: session.id } } } },
+      },
+      select: { id: true },
+    })
+    if (!assigned) redirect('/unauthorized')
+  }
+
   const student = await db.student.findUnique({
     where: { id },
     include: {
@@ -103,10 +116,10 @@ export default async function StudentDetailPage({ params }: { params: Params }) 
   }
   let parentEngagement: EngagementData[] = []
   if (session.role === 'admin' && student.parents.length > 0) {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
-    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
-    const now = new Date()
+    const now = currentDate()
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
     const parentUserIds = student.parents.map(p => p.parent.userId)
 
     const [recentNoticeCount, paidInvoices, reads] = await Promise.all([

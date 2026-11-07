@@ -44,6 +44,7 @@ const DAY_PATTERNS: Record<number, number[]> = {
 }
 
 const ALL_DAYS = [1, 2, 3, 4, 5]
+const DAY_NAMES = ['', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi']
 const ALL_PERIODS = [1, 2, 3, 4, 5, 6, 7, 8]
 
 export function generateSlots(
@@ -102,7 +103,7 @@ export function generateSlots(
             assignedRoom = req.preferredRoomId
           } else {
             // Preferred room taken — schedule without room and warn
-            warning = `Preferred room unavailable on day ${day} period ${period}`
+            warning = `Salle préférée indisponible le ${DAY_NAMES[day]} au créneau P${period}.`
           }
         }
 
@@ -149,7 +150,7 @@ export function generateSlots(
               if (roomKey && !roomBooked.has(roomKey)) {
                 assignedRoom = req.preferredRoomId
               } else {
-                warning = `Preferred room unavailable on day ${fallbackDay} period ${period}`
+                warning = `Salle préférée indisponible le ${DAY_NAMES[fallbackDay]} au créneau P${period}.`
               }
             }
 

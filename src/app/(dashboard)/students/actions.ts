@@ -20,6 +20,7 @@ function generateTempPassword(): string {
 // ─── Create ──────────────────────────────────────────────────────────────────
 
 export async function createStudentAction(formData: FormData): Promise<{ success: boolean; error?: string; id?: string; tempPassword?: string }> {
+  await requireRole(['admin'])
   try {
     const firstName = (formData.get('firstName') as string)?.trim()
     const lastName = (formData.get('lastName') as string)?.trim()
@@ -42,12 +43,12 @@ export async function createStudentAction(formData: FormData): Promise<{ success
     const emergencyRelation = (formData.get('emergencyRelation') as string)?.trim() || null
 
     if (!firstName || !lastName || !email) {
-      return { success: false, error: 'First name, last name, and email are required.' }
+      return { success: false, error: 'Le prénom, le nom et l’adresse e-mail sont obligatoires.' }
     }
 
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
-      return { success: false, error: 'A user with this email already exists.' }
+      return { success: false, error: 'Un compte utilise déjà cette adresse e-mail.' }
     }
 
     const tempPassword = generateTempPassword()
@@ -93,16 +94,17 @@ export async function createStudentAction(formData: FormData): Promise<{ success
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
     console.error('createStudentAction error:', err)
-    return { success: false, error: 'An unexpected error occurred. Please try again.' }
+    return { success: false, error: 'Une erreur inattendue est survenue. Veuillez réessayer.' }
   }
 }
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
 export async function updateStudentAction(id: string, formData: FormData): Promise<{ success: boolean; error?: string }> {
+  await requireRole(['admin'])
   try {
     const student = await db.student.findUnique({ where: { id }, include: { user: true } })
-    if (!student) return { success: false, error: 'Student not found.' }
+    if (!student) return { success: false, error: 'Élève introuvable.' }
 
     const firstName = (formData.get('firstName') as string)?.trim()
     const lastName = (formData.get('lastName') as string)?.trim()
@@ -125,13 +127,13 @@ export async function updateStudentAction(id: string, formData: FormData): Promi
     const emergencyRelation = (formData.get('emergencyRelation') as string)?.trim() || null
 
     if (!firstName || !lastName || !email) {
-      return { success: false, error: 'First name, last name, and email are required.' }
+      return { success: false, error: 'Le prénom, le nom et l’adresse e-mail sont obligatoires.' }
     }
 
     // Check email uniqueness (excluding current user)
     if (email !== student.user.email) {
       const existing = await db.user.findUnique({ where: { email } })
-      if (existing) return { success: false, error: 'A user with this email already exists.' }
+      if (existing) return { success: false, error: 'Un compte utilise déjà cette adresse e-mail.' }
     }
 
     await db.user.update({
@@ -170,16 +172,17 @@ export async function updateStudentAction(id: string, formData: FormData): Promi
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
     console.error('updateStudentAction error:', err)
-    return { success: false, error: 'An unexpected error occurred. Please try again.' }
+    return { success: false, error: 'Une erreur inattendue est survenue. Veuillez réessayer.' }
   }
 }
 
 // ─── Delete (soft) ───────────────────────────────────────────────────────────
 
 export async function deleteStudentAction(id: string): Promise<{ success: boolean; error?: string }> {
+  await requireRole(['admin'])
   try {
     const student = await db.student.findUnique({ where: { id } })
-    if (!student) return { success: false, error: 'Student not found.' }
+    if (!student) return { success: false, error: 'Élève introuvable.' }
 
     await db.student.update({
       where: { id },
@@ -195,7 +198,7 @@ export async function deleteStudentAction(id: string): Promise<{ success: boolea
     return { success: true }
   } catch (err: unknown) {
     console.error('deleteStudentAction error:', err)
-    return { success: false, error: 'An unexpected error occurred.' }
+    return { success: false, error: 'Une erreur inattendue est survenue.' }
   }
 }
 
@@ -208,7 +211,7 @@ export async function recordTransferInAction(
   const session = await requireRole(['admin'])
 
   const previousSchool = (formData.get('previousSchool') as string)?.trim()
-  if (!previousSchool) return { success: false, error: 'Previous school is required.' }
+  if (!previousSchool) return { success: false, error: 'L’établissement précédent est obligatoire.' }
 
   const transferDate = new Date(formData.get('transferDate') as string)
   const previousYearLevelRaw = formData.get('previousYearLevel') as string
@@ -243,7 +246,7 @@ export async function recordTransferInAction(
     return { success: true }
   } catch (err: unknown) {
     console.error('recordTransferInAction error:', err)
-    return { success: false, error: 'Failed to save transfer record.' }
+    return { success: false, error: 'Impossible d’enregistrer le dossier de transfert.' }
   }
 }
 
@@ -296,6 +299,7 @@ export async function searchStudentsAction(
   yearLevel?: string,
   status?: string,
 ) {
+  await requireRole(['admin'])
   const students = await db.student.findMany({
     where: {
       AND: [

@@ -68,7 +68,7 @@ export default function FeeTypeForm({ feeType, onSuccess, currencySymbol }: Prop
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{feeType ? 'Edit Fee Type' : 'Add Fee Type'}</CardTitle>
+        <CardTitle>{feeType ? 'Modifier le type de frais' : 'Ajouter un type de frais'}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -79,24 +79,24 @@ export default function FeeTypeForm({ feeType, onSuccess, currencySymbol }: Prop
           )}
           {success && (
             <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-              Fee type {feeType ? 'updated' : 'created'} successfully.
+              Type de frais {feeType ? 'mis à jour' : 'créé'} avec succès.
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">Nom *</Label>
               <Input
                 id="name"
                 name="name"
                 defaultValue={feeType?.name}
-                placeholder="e.g. Tuition Fee"
+                placeholder="Ex. : Frais de scolarité"
                 required
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="amount">Amount ({currencySymbol}) *</Label>
+              <Label htmlFor="amount">Montant ({currencySymbol}) *</Label>
               <Input
                 id="amount"
                 name="amount"
@@ -111,42 +111,42 @@ export default function FeeTypeForm({ feeType, onSuccess, currencySymbol }: Prop
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
               name="description"
               defaultValue={feeType?.description ?? ''}
               rows={2}
-              placeholder="Optional description..."
+              placeholder="Description facultative…"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>Frequency *</Label>
+              <Label>Fréquence *</Label>
               <Select value={frequency} onValueChange={(v) => { if (v !== null) setFrequency(v) }} name="frequency">
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="annual">Annual</SelectItem>
-                  <SelectItem value="term">Per Term</SelectItem>
-                  <SelectItem value="once-off">Once-off</SelectItem>
+                  <SelectItem value="annual">Annuelle</SelectItem>
+                  <SelectItem value="term">Par trimestre</SelectItem>
+                  <SelectItem value="once-off">Ponctuelle</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Year Level (optional)</Label>
+              <Label>Niveau (facultatif)</Label>
               <Select value={yearLevel} onValueChange={(v) => setYearLevel(v ?? '')}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All year levels" />
+                  <SelectValue placeholder="Tous les niveaux" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All year levels</SelectItem>
+                  <SelectItem value="">Tous les niveaux</SelectItem>
                   {YEAR_LEVELS.map(y => (
                     <SelectItem key={y} value={String(y)}>
-                      Year {y}
+                      Niveau {y}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -162,11 +162,11 @@ export default function FeeTypeForm({ feeType, onSuccess, currencySymbol }: Prop
               onChange={e => setActive(e.target.checked)}
               className="h-4 w-4 rounded border-slate-300"
             />
-            <Label htmlFor="active" className="cursor-pointer">Active</Label>
+            <Label htmlFor="active" className="cursor-pointer">Actif</Label>
           </div>
 
           <Button type="submit" disabled={isPending}>
-            {isPending ? 'Saving...' : feeType ? 'Update Fee Type' : 'Add Fee Type'}
+            {isPending ? 'Enregistrement…' : feeType ? 'Mettre à jour' : 'Ajouter le type de frais'}
           </Button>
         </form>
       </CardContent>
